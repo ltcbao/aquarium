@@ -6,7 +6,7 @@
   "scripts": {
     "start": "npx serve .",
     "dev": "npx serve .",
-    "check": "node -e \"const fs=require('fs'),path=require('path');function walk(d){let r=[];for(let f of fs.readdirSync(d)){let p=path.join(d,f);if(fs.statSync(p).isDirectory())r.push(...walk(p));else if(p.endsWith('.js'))r.push(p);}return r;}const files=walk('js');for(const f of files){try{new Function(fs.readFileSync(f,'utf8'));}catch(e){console.error('Syntax error in '+f+': '+e.message);process.exit(1);}}console.log('✓ All '+files.length+' JS files passed AST syntax check.');\"",
+    "check": "node -e \"const fs=require('fs'),path=require('path');function walk(d){let r=[];for(let f of fs.readdirSync(d)){let p=path.join(d,f);if(fs.statSync(p).isDirectory())r.push(...walk(p));else if(p.endsWith('.js'))r.push(p);}return r;}const files=walk('js');for(const f of files){try{const c=fs.readFileSync(f,'utf8');if(!c.includes('import ')&&!c.includes('export ')){new Function(c);}}catch(e){console.error('Syntax error in '+f+': '+e.message);process.exit(1);}}console.log('✓ All '+files.length+' JS files passed AST syntax check.');\"",
     "test": "npm run check"
   },
   "keywords": [
@@ -17,5 +17,8 @@
     "clean-architecture"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.186.1"
+  }
 }

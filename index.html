@@ -15,13 +15,23 @@
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐠</text></svg>">
     <link rel="stylesheet" href="css/styles.css">
+    <!-- Three.js (WebGL 3D Engine) -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "./libs/three.module.js",
+            "three/addons/controls/OrbitControls.js": "./libs/OrbitControls.js"
+        }
+    }
+    </script>
 </head>
 
 <body class="relative w-screen h-screen overflow-hidden select-none">
 
-    <!-- MAIN AQUARIUM CANVAS -->
-    <div id="canvas-container" class="absolute inset-0 w-full h-full z-0">
-        <canvas id="aquariumCanvas"></canvas>
+    <!-- MAIN AQUARIUM CANVAS (DUAL ENGINE: 3D THREE.JS & 2D CANVAS) -->
+    <div id="canvas-container" class="absolute inset-0 w-full h-full z-0 overflow-hidden">
+        <canvas id="threeCanvas" class="hidden absolute inset-0 w-full h-full"></canvas>
+        <canvas id="aquariumCanvas" class="absolute inset-0 w-full h-full"></canvas>
     </div>
 
     <!-- FLOATING TOAST NOTIFICATIONS -->
@@ -164,6 +174,22 @@
                 title="Toggle 60 FPS Profiler [Key: P]">
                 <i class="ph-fill ph-gauge text-cyan-300 text-sm"></i>
                 <span class="hidden 2xl:inline">Profiler</span>
+            </button>
+
+            <!-- Dual-Engine Switcher (Canvas 2D vs Three.js 3D) -->
+            <button onclick="toggleRenderEngine()" id="btn-engine-toggle"
+                class="px-2 py-1 rounded-xl bg-gradient-to-r from-blue-600/80 to-cyan-600/80 hover:from-blue-500 hover:to-cyan-500 border border-cyan-400/50 text-xs font-bold flex items-center gap-1.5 text-white shadow-md shadow-cyan-500/20 transition"
+                title="Switch between Canvas 2D and Three.js 3D WebGL Engine">
+                <i class="ph-fill ph-cube text-cyan-200 text-sm"></i>
+                <span id="hud-engine-label">3D Engine</span>
+            </button>
+
+            <!-- 360 Camera Orbit Mode (Active in 3D WebGL) -->
+            <button onclick="toggle360Camera()" id="btn-360-cam"
+                class="hidden px-2 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700/80 border border-slate-600/50 text-xs font-semibold flex items-center gap-1.5 text-slate-300 transition"
+                title="Bật/Tắt xoay camera 360° tự do ngắm bể cá">
+                <i class="ph-fill ph-arrows-clockwise text-cyan-300 text-sm"></i>
+                <span id="cam-360-label" class="hidden sm:inline">360° Cam</span>
             </button>
 
             <!-- Tap Glass -->
@@ -634,12 +660,13 @@
     <script src="js/engine/physics.js"></script>
     <script src="js/engine/simulation.js"></script>
 
-    <!-- Layer 4: 2D Canvas Graphics & VFX -->
+    <!-- Layer 4: 2D Canvas & 3D Three.js Graphics -->
     <script src="js/render/vfx.js"></script>
     <script src="js/render/canvas-bg.js"></script>
     <script src="js/render/canvas-decor.js"></script>
     <script src="js/render/fish-renderer.js"></script>
     <script src="js/render/renderer.js"></script>
+    <script type="module" src="js/render/three-scene.js"></script>
 
     <!-- Layer 5: User Interface & DOM Views -->
     <script src="js/ui/ui-svgs.js"></script>

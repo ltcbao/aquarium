@@ -26,6 +26,7 @@ let state = {
     achievements: {},
     currentBiome: 'amazon_freshwater',
     fertilizerStock: 8,
+    renderMode: '3d', // '3d' (Three.js WebGL) | '2d' (HTML5 Canvas)
     lastSavedAt: Date.now()
 };
 
@@ -82,5 +83,16 @@ let mousePos = { x: cw * 0.5, y: ch * 0.5, active: false };
 let photoMode = false;
 let tankSnail = { x: 180, dir: 1, shellRot: 0 };
 let hudUpdateTimer = 0;
+
+// Dual-Engine Fallback Stub (overridden when three-scene.js finishes loading)
+window.toggleRenderEngine = function () {
+    if (typeof window.__threeToggleReady === 'function') {
+        window.__threeToggleReady();
+    } else {
+        if (typeof showToast === 'function') {
+            showToast('⏳ Đang nạp Three.js 3D Engine, vui lòng chờ trong giây lát...', 'cyan');
+        }
+    }
+};
 
 

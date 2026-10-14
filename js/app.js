@@ -8,7 +8,12 @@ function animateLoop(now) {
     const t1 = performance.now();
     updateFishPhysics(dtSeconds);
     const t2 = performance.now();
-    renderAquarium(now);
+
+    if (state.renderMode === '3d' && typeof renderAquarium3D === 'function') {
+        renderAquarium3D(now);
+    } else {
+        renderAquarium(now);
+    }
     const t3 = performance.now();
 
     profilerMetrics.simTimeMs = t1 - t0;
@@ -33,5 +38,15 @@ window.onload = function () {
     const theme = LIGHT_THEMES[state.lightThemeIndex || 0];
     document.getElementById('light-theme-label').textContent = theme.name;
     lastSimTick = performance.now();
+
+    // Async initialization for ES module 3D Engine
+    const targetMode = state.renderMode || '3d';
+    const check3DReady = setInterval(() => {
+        if (typeof initThreeScene === 'function' && typeof setRenderMode === 'function') {
+            clearInterval(check3DReady);
+            setRenderMode(targetMode);
+        }
+    }, 40);
+
     requestAnimationFrame(animateLoop);
 };

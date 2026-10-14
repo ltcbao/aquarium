@@ -12,6 +12,9 @@ function invalidateBgGradients() {
     cachedThemeKey = '';
     cachedSandKey = '';
     cachedRayKey = '';
+    if (typeof updateThreeEnvironment === 'function') {
+        updateThreeEnvironment();
+    }
 }
 
 function drawWaterBackground(now) {
