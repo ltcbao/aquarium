@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AquaVerse — Interactive Aquarium Builder & Fish Lifecycle Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐠</text></svg>">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body class="relative w-screen h-screen overflow-hidden select-none">
+
+    <!-- MAIN AQUARIUM CANVAS -->
+    <div id="canvas-container" class="absolute inset-0 w-full h-full z-0">
+        <canvas id="aquariumCanvas"></canvas>
+    </div>
+
+    <!-- FLOATING TOAST NOTIFICATIONS -->
+    <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-xs w-full">
+    </div>
+
+    <!-- TOP HUD BAR -->
+    <header
+        class="fixed top-0 left-0 right-0 z-20 p-2 sm:p-2.5 pointer-events-none flex items-center justify-between gap-1.5 sm:gap-2.5 transition-opacity duration-300">
+        <!-- Brand & Level Progress -->
+        <div class="glass-panel rounded-2xl px-2.5 sm:px-3 py-1.5 pointer-events-auto flex items-center gap-2.5 shrink-0 shadow-lg">
+            <div
+                class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-md shadow-cyan-500/25">
+                <i class="ph-fill ph-fish-simple text-white text-xl"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-1.5">
+                    <h1 class="font-bold text-xs sm:text-sm tracking-tight text-white">AquaVerse</h1>
+                    <span id="hud-level"
+                        class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">LVL
+                        1</span>
+                </div>
+                <div
+                    class="w-20 sm:w-28 h-1.5 bg-slate-800/90 rounded-full overflow-hidden mt-0.5 border border-slate-700/60">
+                    <div id="hud-xp-bar"
+                        class="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 transition-all duration-300"
+                        style="width: 15%"></div>
+                </div>
+                <div class="text-[9px] text-slate-400 flex justify-between mt-0.5 font-mono-num">
+                    <span id="hud-xp-text">15 / 100 XP</span>
+                    <span id="autosave-indicator" class="text-emerald-400 flex items-center gap-0.5"><i
+                            class="ph-fill ph-check-circle"></i> Saved</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Core Tank Metrics -->
+        <div class="glass-panel rounded-2xl px-2.5 sm:px-3.5 py-1.5 pointer-events-auto flex items-center gap-2.5 sm:gap-4 shrink-0 shadow-lg">
+            <!-- AquaCoins -->
+            <div class="flex items-center gap-1.5" title="Available AquaCoins">
+                <div
+                    class="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300">
+                    <i class="ph-fill ph-coins text-base"></i>
+                </div>
+                <div>
+                    <div class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold leading-tight">Coins</div>
+                    <div id="hud-coins" class="text-xs sm:text-sm font-bold text-amber-300 font-mono-num">250</div>
+                </div>
+            </div>
+
+            <div class="h-6 w-[1px] bg-slate-700/60 hidden sm:block"></div>
+
+            <!-- Water Quality -->
+            <div class="flex items-center gap-1.5"
+                title="Water Quality affects fish health & breeding. Boost with filters, plants, or cleaning!">
+                <div
+                    class="w-7 h-7 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300">
+                    <i class="ph-fill ph-drop text-base"></i>
+                </div>
+                <div class="w-16 sm:w-22">
+                    <div class="flex justify-between text-[9px] uppercase tracking-wider font-semibold leading-tight">
+                        <span class="text-slate-400">Water</span>
+                        <span id="hud-water-text" class="text-cyan-300 font-mono-num">98%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-0.5 border border-slate-700/60">
+                        <div id="hud-water-bar"
+                            class="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 transition-all duration-300"
+                            style="width: 98%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="h-6 w-[1px] bg-slate-700/60 hidden md:block"></div>
+
+            <!-- Temperature & Oxygen -->
+            <div class="hidden lg:flex items-center gap-1.5">
+                <div
+                    class="w-7 h-7 rounded-lg bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-rose-300">
+                    <i class="ph-fill ph-thermometer text-base"></i>
+                </div>
+                <div>
+                    <div class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold leading-tight">Temp</div>
+                    <div id="hud-temp" class="text-[11px] font-bold text-slate-200 font-mono-num">25.5°C</div>
+                </div>
+            </div>
+
+            <div class="h-6 w-[1px] bg-slate-700/60 hidden sm:block"></div>
+
+            <!-- Population -->
+            <div class="flex items-center gap-1.5">
+                <div
+                    class="w-7 h-7 rounded-lg bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300">
+                    <i class="ph-fill ph-fish text-base"></i>
+                </div>
+                <div>
+                    <div class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold leading-tight">Pop.</div>
+                    <div class="text-xs sm:text-sm font-bold text-indigo-200 font-mono-num">
+                        <span id="hud-pop">0</span>/<span id="hud-max-pop">16</span>
+                        <span id="hud-eggs-badge"
+                            class="hidden ml-1 text-[9px] px-1 py-0.2 rounded bg-amber-500/30 text-amber-200 border border-amber-400/30">0
+                            Eggs</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Time Speed, Lighting, Profiler & Quick Controls -->
+        <div class="glass-panel rounded-2xl px-2 py-1.5 pointer-events-auto flex items-center gap-1 sm:gap-1.5 shrink-0 shadow-lg">
+            <!-- Speed Controls -->
+            <div class="flex items-center bg-slate-900/90 p-0.5 rounded-xl border border-slate-700/60"
+                title="Simulation Speed">
+                <button onclick="setSimSpeed(1)" id="speed-1"
+                    class="px-1.5 py-0.5 rounded-lg text-xs font-bold transition bg-cyan-500 text-slate-950">1x</button>
+                <button onclick="setSimSpeed(2)" id="speed-2"
+                    class="px-1.5 py-0.5 rounded-lg text-xs font-bold transition text-slate-300 hover:text-white">2x</button>
+                <button onclick="setSimSpeed(5)" id="speed-5"
+                    class="px-1.5 py-0.5 rounded-lg text-xs font-bold transition text-slate-300 hover:text-white"
+                    title="5x Turbo Mode">5x⚡</button>
+            </div>
+
+            <!-- Biome Environment Selector -->
+            <button onclick="cycleBiome()" id="btn-biome-switcher"
+                class="px-2 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700/80 border border-slate-600/50 text-xs font-medium flex items-center gap-1 text-emerald-200 transition"
+                title="Switch Biome (Amazon, Coral Reef, Atlantis, Cyber Trench) [Key: B]">
+                <i class="ph-fill ph-compass text-emerald-300 text-sm"></i>
+                <span id="hud-biome-name" class="hidden md:inline">Amazon</span>
+            </button>
+
+            <!-- LED Lighting Mode Selector -->
+            <button onclick="cycleLightTheme()" id="btn-light-theme"
+                class="p-1.5 sm:px-2 sm:py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700/80 border border-slate-600/50 text-xs font-medium flex items-center gap-1 text-cyan-200 transition"
+                title="Switch LED Spectrum">
+                <i class="ph-fill ph-sun-horizon text-amber-300 text-sm"></i>
+                <span id="light-theme-label" class="hidden 2xl:inline">Daylight LED</span>
+            </button>
+
+            <!-- Profiler Toggle -->
+            <button onclick="toggleFpsProfiler()" id="btn-fps-profiler"
+                class="p-1.5 sm:px-2 sm:py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700/80 border border-slate-600/50 text-xs font-medium flex items-center gap-1 text-slate-300 hover:text-white transition"
+                title="Toggle 60 FPS Profiler [Key: P]">
+                <i class="ph-fill ph-gauge text-cyan-300 text-sm"></i>
+                <span class="hidden 2xl:inline">Profiler</span>
+            </button>
+
+            <!-- Tap Glass -->
+            <!-- Glass Tap -->
+            <button onclick="triggerGlassTap(cw * 0.5, ch * 0.45)"
+                class="p-1.5 sm:px-2 sm:py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-400/40 text-xs font-semibold flex items-center gap-1 text-cyan-200 transition"
+                title="Tap glass to gather fish! (Shortcut: T)">
+                <i class="ph-fill ph-hand-tap text-cyan-300 text-sm"></i>
+                <span class="hidden xl:inline text-[11px]">Tap Glass</span>
+            </button>
+
+            <!-- Quick Scan & Sync Ecosystem -->
+            <button onclick="scanAndSyncEcosystem(true)" id="btn-scan-ecosystem"
+                class="p-1.5 sm:px-2 sm:py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/35 border border-emerald-400/40 text-xs font-semibold flex items-center gap-1 text-emerald-200 transition shadow-sm"
+                title="Quét & Render Toàn bộ Loài cá & Thực vật mới vào hồ">
+                <i class="ph-fill ph-plant text-emerald-300 text-sm"></i>
+                <span class="hidden md:inline text-[11px] font-medium">Quét Sinh Cảnh</span>
+            </button>
+
+            <!-- Photo Mode -->
+            <button onclick="togglePhotoMode()" id="btn-photo-mode"
+                class="p-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/80 border border-slate-600/50 text-slate-300 hover:text-white transition"
+                title="Cinematic Clean View (Shortcut: C)">
+                <i class="ph-fill ph-camera text-sm text-purple-300"></i>
+            </button>
+
+            <!-- Sound Toggle -->
+            <button onclick="toggleAudio()" id="btn-audio"
+                class="p-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/80 border border-slate-600/50 text-slate-300 hover:text-white transition"
+                title="Toggle Audio">
+                <i id="icon-audio" class="ph-fill ph-speaker-high text-sm"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Floating Environmental Event Alert Banner -->
+    <div id="hud-event-banner"
+        class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-20 glass-panel rounded-full px-4 py-1 pointer-events-auto flex items-center gap-2 border shadow-xl animate-bounce">
+        <i id="hud-event-icon" class="ph-fill ph-sun text-sm"></i>
+        <span id="hud-event-text" class="text-xs font-bold text-white">Event</span>
+        <span id="hud-event-timer"
+            class="text-xs font-mono-num font-bold px-1.5 py-0.2 rounded bg-slate-950/70 text-amber-300">30s</span>
+    </div>
+
+    <!-- CONTEXTUAL SUB-TOOLBAR (Floating Above Bottom Dock with 36px clearance) -->
+    <div id="sub-toolbar"
+        class="fixed bottom-24 left-1/2 -translate-x-1/2 z-20 pointer-events-auto transition-all duration-300">
+        <!-- Feed Mode Selector -->
+        <div id="sub-feed" class="glass-panel rounded-2xl px-3 py-1.5 flex items-center gap-1.5 shadow-2xl border border-cyan-500/30">
+            <span class="text-[11px] font-semibold text-slate-300 mr-1 hidden sm:flex items-center gap-1">
+                <i class="ph-fill ph-hand-pointing text-cyan-400"></i> Drop food:
+            </span>
+            <button onclick="selectFoodType('flakes')" id="food-btn-flakes"
+                class="px-2.5 py-1 rounded-xl text-xs font-semibold border border-cyan-400 bg-cyan-500/25 text-white flex items-center gap-1.5 transition">
+                <span class="w-2 h-2 rounded-full bg-amber-400 inline-block shadow-sm"></span>
+                <span>Flakes (Free)</span>
+            </button>
+            <button onclick="selectFoodType('pellets')" id="food-btn-pellets"
+                class="px-2.5 py-1 rounded-xl text-xs font-semibold border border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white flex items-center gap-1.5 transition">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block shadow-sm"></span>
+                <span>Pellets (2🪙)</span>
+            </button>
+            <button onclick="selectFoodType('medicated')" id="food-btn-medicated"
+                class="px-2.5 py-1 rounded-xl text-xs font-semibold border border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white flex items-center gap-1.5 transition">
+                <span class="w-2 h-2 rounded-full bg-rose-400 inline-block shadow-sm"></span>
+                <span>Vita-Med (4🪙)</span>
+            </button>
+        </div>
+
+        <!-- Laser Toy Mode Selector -->
+        <div id="sub-laser" class="hidden glass-panel rounded-2xl px-3.5 py-2 flex items-center gap-3 shadow-2xl border border-rose-500/40">
+            <span class="text-xs text-rose-200 flex items-center gap-1.5">
+                <i class="ph-fill ph-crosshair text-rose-400"></i> Move mouse in water to shine Laser Pointer — curious fish joyfully chase & flip!
+            </span>
+            <button onclick="triggerGlassTap(mousePos.x, mousePos.y)"
+                class="px-2.5 py-1 rounded-lg bg-rose-500/20 border border-rose-400/40 text-rose-200 text-xs font-semibold hover:bg-rose-500/30 transition">
+                Pulse Laser Ripple
+            </button>
+        </div>
+
+        <!-- Clean Mode Subbar -->
+        <div id="sub-clean" class="hidden glass-panel rounded-2xl px-3.5 py-2 flex items-center gap-3 shadow-2xl">
+            <span class="text-xs text-slate-200 flex items-center gap-1.5">
+                <i class="ph-fill ph-sparkle text-emerald-400"></i> Click waste or algae spots to siphon (+Water Quality
+                & XP)
+            </span>
+            <button onclick="performWaterChange()"
+                class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-xs shadow-lg shadow-cyan-500/25 flex items-center gap-1.5 transition">
+                <i class="ph-bold ph-arrows-clockwise"></i> 30% Water Change (15🪙)
+            </button>
+        </div>
+
+        <!-- Inspect Mode Subbar -->
+        <div id="sub-inspect" class="hidden glass-panel rounded-2xl px-3.5 py-2 flex items-center gap-3 shadow-2xl">
+            <span class="text-xs text-slate-200 flex items-center gap-1.5">
+                <i class="ph-fill ph-magnifying-glass text-cyan-400"></i> Click any fish or egg in the tank to inspect
+                its lifecycle, rename, or breed
+            </span>
+        </div>
+
+        <!-- Decorate Mode Subbar -->
+        <div id="sub-decorate" class="hidden glass-panel rounded-2xl px-3.5 py-2 flex items-center gap-3 shadow-2xl">
+            <span class="text-xs text-slate-200 flex items-center gap-1.5">
+                <i class="ph-fill ph-CursorClick text-emerald-400"></i> Drag any plant, rock, or ornament on the
+                substrate to reposition it
+            </span>
+            <button onclick="openDrawer('decor')"
+                class="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-semibold hover:bg-emerald-500/30 transition">
+                + Buy More Decor
+            </button>
+        </div>
+
+        <!-- Garden Care Subbar -->
+        <div id="sub-garden" class="hidden glass-panel rounded-2xl px-3.5 py-2 flex items-center gap-3 shadow-2xl border border-emerald-500/40">
+            <span class="text-xs text-emerald-200 flex items-center gap-1.5">
+                <i class="ph-fill ph-scissors text-emerald-300"></i> Click a plant to Fertilize (Growth Boost) or Prune (Harvest coins & XP)!
+            </span>
+            <div class="flex items-center gap-2">
+                <span id="hud-fertilizer-count" class="text-xs font-bold text-emerald-300 bg-slate-900/80 px-2 py-1 rounded-lg border border-emerald-500/30 font-mono-num">
+                    🌱 8 Fert.
+                </span>
+                <button onclick="buyMoreFertilizer()"
+                    class="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-semibold hover:bg-emerald-500/30 transition">
+                    + Buy Fert (15🪙)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SELECTED FISH INSPECTOR FLOATING CARD -->
+    <div id="fish-inspector"
+        class="hidden fixed top-24 left-4 z-30 w-80 glass-panel rounded-2xl p-4 pointer-events-auto shadow-2xl border border-cyan-400/40 transition-all">
+        <div class="flex items-start justify-between gap-2 pb-3 border-b border-slate-700/70">
+            <div class="flex items-center gap-2.5">
+                <div id="insp-badge-color"
+                    class="w-16 h-12 rounded-xl bg-slate-950/90 border border-cyan-400/40 flex items-center justify-center overflow-hidden p-1 shadow-inner">
+                    <i class="ph-fill ph-fish text-xl text-cyan-300"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <input id="insp-name-input" type="text" maxlength="18"
+                            class="bg-transparent border-b border-transparent hover:border-slate-500 focus:border-cyan-400 focus:outline-none font-bold text-white text-sm w-32 px-0.5"
+                            value="Nemo" onchange="renameSelectedFish(this.value)">
+                        <i class="ph ph-pencil-simple text-xs text-slate-400"></i>
+                    </div>
+                    <div id="insp-species" class="text-xs text-cyan-300 font-medium">Ocellaris Clownfish</div>
+                </div>
+            </div>
+            <button onclick="closeInspector()"
+                class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+                <i class="ph-bold ph-x"></i>
+            </button>
+        </div>
+
+        <!-- Lifecycle Stage Pill & Age -->
+        <div class="grid grid-cols-2 gap-2 my-3">
+            <div class="bg-slate-900/70 rounded-xl p-2 border border-slate-800">
+                <div class="text-[10px] uppercase text-slate-400 font-semibold">Life Stage</div>
+                <div id="insp-stage" class="text-xs font-bold text-emerald-300 mt-0.5 flex items-center gap-1">
+                    <i class="ph-fill ph-sparkle"></i> Adult
+                </div>
+            </div>
+            <div class="bg-slate-900/70 rounded-xl p-2 border border-slate-800">
+                <div class="text-[10px] uppercase text-slate-400 font-semibold">Age / Income</div>
+                <div id="insp-age-income" class="text-xs font-bold text-amber-300 mt-0.5 font-mono-num">4m • +3🪙/m
+                </div>
+            </div>
+        </div>
+
+        <!-- Vital Bars -->
+        <div class="space-y-2.5 text-xs">
+            <!-- Growth / Maturity Progress -->
+            <div>
+                <div class="flex justify-between text-[11px] mb-1">
+                    <span class="text-slate-300 font-medium">Lifecycle Growth</span>
+                    <span id="insp-growth-text" class="text-cyan-300 font-mono-num">64% to Adult</span>
+                </div>
+                <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div id="insp-growth-bar"
+                        class="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-300"
+                        style="width: 64%"></div>
+                </div>
+            </div>
+
+            <!-- Hunger / Fullness Bar -->
+            <div>
+                <div class="flex justify-between text-[11px] mb-1">
+                    <span class="text-slate-300 font-medium">Nutrition (Fullness)</span>
+                    <span id="insp-hunger-text" class="text-emerald-300 font-mono-num">88%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div id="insp-hunger-bar"
+                        class="h-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-300"
+                        style="width: 88%"></div>
+                </div>
+            </div>
+
+            <!-- Health Bar -->
+            <div>
+                <div class="flex justify-between text-[11px] mb-1">
+                    <span class="text-slate-300 font-medium">Vitality & Health</span>
+                    <span id="insp-health-text" class="text-rose-300 font-mono-num">100%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div id="insp-health-bar"
+                        class="h-full bg-gradient-to-r from-rose-500 to-emerald-400 transition-all duration-300"
+                        style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Breeding Status -->
+        <div id="insp-breed-box"
+            class="mt-3 p-2.5 rounded-xl bg-indigo-950/60 border border-indigo-500/30 text-[11px] text-indigo-200 flex items-center justify-between">
+            <span id="insp-breed-status">Needs another healthy Adult to spawn eggs</span>
+        </div>
+
+        <!-- Inspector Actions -->
+        <div class="mt-3 pt-3 border-t border-slate-700/70 flex items-center justify-between gap-2">
+            <button onclick="healSelectedFish()"
+                class="flex-1 py-1.5 px-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-200 text-xs font-semibold flex items-center justify-center gap-1 transition">
+                <i class="ph-fill ph-first-aid"></i> Direct Treat (5🪙)
+            </button>
+            <button onclick="sellSelectedFish()" id="insp-sell-btn"
+                class="py-1.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 text-xs font-semibold flex items-center justify-center gap-1 transition">
+                <i class="ph-fill ph-coins"></i> Sell (20🪙)
+            </button>
+        </div>
+    </div>
+
+    <!-- BOTTOM CONTROL DOCK (Collapsible & Non-Obstructive) -->
+    <nav id="bottom-dock-container" class="fixed bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-auto max-w-[98vw]">
+        <!-- Quick Dock Collapse Toggle Button -->
+        <button onclick="toggleDockCollapse()" id="btn-toggle-dock"
+            class="absolute -top-3.5 right-5 sm:right-7 px-2.5 py-0.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-[10px] font-semibold text-slate-300 hover:text-cyan-300 border border-slate-700/80 shadow-lg flex items-center gap-1 transition cursor-pointer z-10"
+            title="Thu gọn thanh điều khiển (Phím tắt: H hoặc Tab)">
+            <i id="icon-toggle-dock" class="ph-bold ph-caret-down text-cyan-400 text-xs"></i>
+            <span id="text-toggle-dock" class="hidden sm:inline">Ẩn dock</span>
+            <kbd class="text-[8px] px-1 py-0.2 rounded bg-slate-800 text-slate-400 font-mono-num ml-0.5">H</kbd>
+        </button>
+
+        <div id="bottom-dock-bar" class="glass-panel rounded-2xl p-1.5 sm:p-2 flex items-center gap-1.5 sm:gap-2.5 shadow-2xl overflow-x-auto border border-cyan-500/25">
+            <!-- Zone 1: Interactive Tank Tools -->
+            <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                <button onclick="setInteractionMode('feed')" id="mode-btn-feed"
+                    class="tool-btn active h-10 px-2.5 sm:px-3 rounded-xl border border-transparent text-xs font-semibold flex items-center gap-1.5 text-white"
+                    title="Feed Fish (Shortcut: 1 or Space)">
+                    <i class="ph-fill ph-bowl-food text-base text-amber-300"></i>
+                    <span>Feed</span>
+                    <kbd class="hidden xl:inline-block text-[9px] px-1 py-0.2 rounded bg-slate-900/60 text-slate-400 font-mono-num">1</kbd>
+                </button>
+                <button onclick="setInteractionMode('clean')" id="mode-btn-clean"
+                    class="tool-btn h-10 px-2.5 sm:px-3 rounded-xl border border-transparent text-xs font-semibold flex items-center gap-1.5 text-slate-300 hover:text-white"
+                    title="Clean Waste & Siphon (Shortcut: 2)">
+                    <i class="ph-fill ph-broom text-base text-emerald-300"></i>
+                    <span>Clean</span>
+                    <kbd class="hidden xl:inline-block text-[9px] px-1 py-0.2 rounded bg-slate-900/60 text-slate-400 font-mono-num">2</kbd>
+                </button>
+                <button onclick="setInteractionMode('inspect')" id="mode-btn-inspect"
+                    class="tool-btn h-10 px-2.5 sm:px-3 rounded-xl border border-transparent text-xs font-semibold flex items-center gap-1.5 text-slate-300 hover:text-white"
+                    title="Inspect & Breed (Shortcut: 3)">
+                    <i class="ph-fill ph-magnifying-glass-plus text-base text-cyan-300"></i>
+                    <span>Inspect</span>
+                    <kbd class="hidden xl:inline-block text-[9px] px-1 py-0.2 rounded bg-slate-900/60 text-slate-400 font-mono-num">3</kbd>
+                </button>
+                <button onclick="setInteractionMode('decorate')" id="mode-btn-decorate"
+                    class="tool-btn h-10 px-2.5 sm:px-3 rounded-xl border border-transparent text-xs font-semibold flex items-center gap-1.5 text-slate-300 hover:text-white"
+                    title="Reposition Hardscape & Plants (Shortcut: 4)">
+                    <i class="ph-fill ph-arrows-out-cardinal text-base text-purple-300"></i>
+                    <span>Decor</span>
+                    <kbd class="hidden xl:inline-block text-[9px] px-1 py-0.2 rounded bg-slate-900/60 text-slate-400 font-mono-num">4</kbd>
+                </button>
+                <button onclick="setInteractionMode('laser')" id="mode-btn-laser"
+                    class="tool-btn h-10 px-2.5 sm:px-3 rounded-xl border border-transparent text-xs font-semibold flex items-center gap-1.5 text-slate-300 hover:text-white"
+                    title="Laser Pointer Toy (Shortcut: 5 or L)">
+                    <i class="ph-fill ph-crosshair text-base text-rose-400"></i>
+                    <span>Laser</span>
+                    <kbd class="hidden xl:inline-block text-[9px] px-1 py-0.2 rounded bg-slate-900/60 text-slate-400 font-mono-num">5</kbd>
+                </button>
+                <button onclick="setInteractionMode('garden')" id="mode-btn-garden"
+                    class="tool-btn h-10 px-2.5 sm:px-3 rounded-xl border border-transparent text-xs font-semibold flex items-center gap-1.5 text-slate-300 hover:text-white"
+                    title="Garden Care: Fertilize & Prune (Shortcut: 6 or G)">
+                    <i class="ph-fill ph-plant text-base text-emerald-400"></i>
+                    <span>Garden</span>
+                    <kbd class="hidden xl:inline-block text-[9px] px-1 py-0.2 rounded bg-slate-900/60 text-slate-400 font-mono-num">6</kbd>
+                </button>
+            </div>
+
+            <div class="h-6 w-[1px] bg-slate-700/60 shrink-0"></div>
+
+            <!-- Zone 2: Management Hub & Encyclopedia -->
+            <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                <button onclick="openDrawer('quests')" id="drawer-btn-quests"
+                    class="tool-btn h-10 px-2.5 sm:px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/30 text-xs font-semibold flex items-center gap-1.5 text-amber-200 relative whitespace-nowrap"
+                    title="Daily Quests & Achievements">
+                    <i class="ph-fill ph-trophy text-base text-amber-300"></i>
+                    <span>Quests</span>
+                    <span id="hud-quest-badge" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full animate-ping"></span>
+                </button>
+                <button onclick="openDrawer('shop')" id="drawer-btn-shop"
+                    class="tool-btn h-10 px-2.5 sm:px-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/30 text-xs font-semibold flex items-center gap-1.5 text-cyan-200 whitespace-nowrap"
+                    title="Species Hatchery & Fish Eggs">
+                    <i class="ph-fill ph-storefront text-base text-cyan-300"></i>
+                    <span>Hatchery</span>
+                </button>
+                <button onclick="openDrawer('decor')" id="drawer-btn-decor"
+                    class="tool-btn h-10 px-2.5 sm:px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-xs font-semibold flex items-center gap-1.5 text-emerald-200 whitespace-nowrap"
+                    title="Live Plants & Hardscape Decor">
+                    <i class="ph-fill ph-tree-evergreen text-base text-emerald-300"></i>
+                    <span>Flora & Gear</span>
+                </button>
+                <button onclick="openDrawer('roster')" id="drawer-btn-roster"
+                    class="tool-btn h-10 px-2.5 sm:px-3 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-400/30 text-xs font-semibold flex items-center gap-1.5 text-indigo-200 whitespace-nowrap"
+                    title="Aquarium Inhabitants Directory">
+                    <i class="ph-fill ph-list-magnifying-glass text-base text-indigo-300"></i>
+                    <span>Roster</span>
+                </button>
+                <button onclick="openDrawer('lab')" id="drawer-btn-lab"
+                    class="tool-btn h-10 px-2.5 sm:px-3 rounded-xl bg-fuchsia-500/15 hover:bg-fuchsia-500/25 border border-fuchsia-400/30 text-xs font-semibold flex items-center gap-1.5 text-fuchsia-200 whitespace-nowrap"
+                    title="Breeding Lab & FishDex">
+                    <i class="ph-fill ph-dna text-base text-fuchsia-300"></i>
+                    <span>FishDex</span>
+                </button>
+                <button onclick="openDrawer('save')" id="drawer-btn-save"
+                    class="tool-btn h-10 px-2.5 sm:px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600/40 text-xs font-semibold flex items-center gap-1.5 text-slate-200 whitespace-nowrap"
+                    title="Save & Environment Settings">
+                    <i class="ph-fill ph-floppy-disk text-base text-amber-300"></i>
+                    <span>Vault</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Floating Minimal Restore Tab (Visible when dock is collapsed) -->
+    <button onclick="toggleDockCollapse()" id="btn-dock-restore-tab"
+        class="hidden fixed bottom-2.5 left-1/2 -translate-x-1/2 z-20 px-4 py-1.5 rounded-full bg-slate-950/85 hover:bg-slate-900 backdrop-blur-md text-xs font-semibold text-cyan-200 border border-cyan-400/50 shadow-2xl flex items-center gap-2 transition hover:scale-105 pointer-events-auto cursor-pointer"
+        title="Hiện lại thanh điều khiển (Phím tắt: H hoặc Tab)">
+        <i class="ph-fill ph-rows text-cyan-400 text-sm"></i>
+        <span>Hiện bảng điều khiển</span>
+        <kbd class="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-cyan-300 font-mono-num border border-cyan-500/30">H / Tab</kbd>
+    </button>
+
+    <!-- SLIDE-OVER DRAWER PANEL -->
+    <aside id="side-drawer"
+        class="fixed top-20 bottom-24 right-4 z-30 w-[92vw] sm:w-[430px] glass-panel rounded-3xl p-4 sm:p-5 flex flex-col pointer-events-auto shadow-2xl transition-all duration-300 translate-x-[120%]">
+        <!-- Drawer Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-700/80">
+            <div class="flex items-center gap-2.5">
+                <i id="drawer-icon" class="ph-fill ph-storefront text-2xl text-cyan-400"></i>
+                <div>
+                    <h2 id="drawer-title" class="font-bold text-base sm:text-lg text-white">Fish Hatchery & Catalog</h2>
+                    <p id="drawer-subtitle" class="text-xs text-slate-400">Adopt Roe Eggs (cheaper) or Juvenile Fish</p>
+                </div>
+            </div>
+            <button onclick="closeDrawer()"
+                class="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition">
+                <i class="ph-bold ph-x text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Drawer Content Container -->
+        <div id="drawer-content" class="flex-1 overflow-y-auto pr-1 mt-3 space-y-3">
+            <!-- Dynamically populated by JS -->
+        </div>
+    </aside>
+
+    <!-- DEPLOYMENT & CLOUD SAVE MODAL -->
+    <div id="deployModal"
+        class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-filter backdrop-blur-md flex items-center justify-center p-4">
+        <div
+            class="glass-panel rounded-3xl max-w-xl w-full p-6 border border-cyan-400/30 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-700/80 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-orange-500/20 border border-orange-400/40 flex items-center justify-center text-orange-300">
+                        <i class="ph-fill ph-cloud-arrow-up text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-white">Deploy on Cloudflare Pages or Netlify</h3>
+                        <p class="text-xs text-slate-400">Zero-build static hosting • 100% client-side persistent state
+                        </p>
+                    </div>
+                </div>
+                <button onclick="closeModal('deployModal')"
+                    class="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <p>
+                    <strong>AquaVerse</strong> is architected as a self-contained single-file web application (<code
+                        class="text-cyan-300 bg-slate-900 px-1.5 py-0.5 rounded">index.html</code>) with automatic <code
+                        class="text-cyan-300 bg-slate-900 px-1.5 py-0.5 rounded">localStorage</code> state persistence
+                    and portable JSON Save Export/Import.
+                </p>
+
+                <div class="grid sm:grid-cols-2 gap-3 pt-1">
+                    <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-orange-500/30 space-y-2">
+                        <div class="font-bold text-orange-300 flex items-center gap-1.5">
+                            <i class="ph-fill ph-lightning"></i> Option 1: Cloudflare Pages
+                        </div>
+                        <ol class="list-decimal list-inside space-y-1 text-xs text-slate-300">
+                            <li>Save this file as <code class="text-amber-200">index.html</code> inside a folder.</li>
+                            <li>Open <strong>Cloudflare Dashboard → Compute (Workers & Pages) → Pages</strong>.</li>
+                            <li>Choose <strong>"Upload assets" (Direct Upload)</strong> or connect a Git repo.</li>
+                            <li>Drag & drop the folder. Build command: <em>None</em>. Output directory: <code
+                                    class="text-amber-200">/</code>.</li>
+                        </ol>
+                    </div>
+
+                    <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-teal-500/30 space-y-2">
+                        <div class="font-bold text-teal-300 flex items-center gap-1.5">
+                            <i class="ph-fill ph-globe-hemisphere-west"></i> Option 2: Netlify Drop
+                        </div>
+                        <ol class="list-decimal list-inside space-y-1 text-xs text-slate-300">
+                            <li>Save this file as <code class="text-teal-200">index.html</code> inside an empty folder.
+                            </li>
+                            <li>Visit <strong>app.netlify.com/drop</strong> in your browser.</li>
+                            <li>Drag the folder onto the dropzone for an instant live HTTPS URL.</li>
+                            <li>Players' aquariums auto-save locally in their browser and can be backed up via JSON.
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div
+                    class="p-3 rounded-xl bg-cyan-950/50 border border-cyan-500/30 text-xs text-cyan-200 flex items-center justify-between gap-3">
+                    <span>Want to download a ready-to-deploy <code class="font-bold">index.html</code> copy right
+                        now?</span>
+                    <button onclick="downloadStandaloneHTML()"
+                        class="shrink-0 px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold transition flex items-center gap-1">
+                        <i class="ph-bold ph-download-simple"></i> Download HTML
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closeModal('deployModal')"
+                    class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold">Close
+                    Guide</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         AquaVerse Architectural Layer Scripts
+         Load order: Data -> Core -> Engine -> Render -> UI -> App Bootstrap
+         ==================================================================== -->
+
+    <!-- Layer 1: Data Catalogs -->
+    <script src="js/data/species.js"></script>
+    <script src="js/data/morphs.js"></script>
+    <script src="js/data/decorations.js"></script>
+    <script src="js/data/equipment.js"></script>
+    <script src="js/data/themes.js"></script>
+    <script src="js/data/quests.js"></script>
+
+    <!-- Layer 2: Core State & Utilities -->
+    <script src="js/core/state.js"></script>
+    <script src="js/core/utils.js"></script>
+    <script src="js/core/audio.js"></script>
+    <script src="js/core/save-system.js"></script>
+
+    <!-- Layer 3: Game Engine (Domain Logic) -->
+    <script src="js/engine/entities.js"></script>
+    <script src="js/engine/food.js"></script>
+    <script src="js/engine/physics.js"></script>
+    <script src="js/engine/simulation.js"></script>
+
+    <!-- Layer 4: 2D Canvas Graphics & VFX -->
+    <script src="js/render/vfx.js"></script>
+    <script src="js/render/canvas-bg.js"></script>
+    <script src="js/render/canvas-decor.js"></script>
+    <script src="js/render/fish-renderer.js"></script>
+    <script src="js/render/renderer.js"></script>
+
+    <!-- Layer 5: User Interface & DOM Views -->
+    <script src="js/ui/ui-svgs.js"></script>
+    <script src="js/ui/ui-hud.js"></script>
+    <script src="js/ui/ui-modals.js"></script>
+    <script src="js/ui/ui-drawer.js"></script>
+    <script src="js/ui/inspector.js"></script>
+    <script src="js/ui/interaction.js"></script>
+    <script src="js/ui/shop.js"></script>
+    <script src="js/ui/lab.js"></script>
+    <script src="js/ui/settings.js"></script>
+
+    <!-- Layer 6: Application Bootstrap & Main Loop -->
+    <script src="js/app.js"></script>
+</body>
+
+</html>
