@@ -529,6 +529,8 @@ function drawSingleFishOrEgg(fish, now) {
         ctx.quadraticCurveTo(-r * 0.1, r * 1.15 + midSpineY, r * 1.02, -r * 0.2 + snoutY);
     } else if (spec.bodyShape === 'axolotl') {
         ctx.ellipse(-r * 0.1, midSpineY * 0.3, r * 1.25, r * 0.46, 0, 0, Math.PI * 2);
+    } else if (spec.bodyShape === 'dumbo') {
+        ctx.ellipse(-r * 0.05, midSpineY * 0.2, r * 0.88, r * 0.75, 0, 0, Math.PI * 2);
     } else if (spec.bodyShape === 'puffer') {
         ctx.ellipse(0, midSpineY * 0.2, r * 0.85, r * 0.78, 0, 0, Math.PI * 2);
     } else {
@@ -878,6 +880,13 @@ function drawSingleFishOrEgg(fish, now) {
         ctx.arc(r * 0.72, getSpineY(0.72) + r * 0.06, r * 0.18, 0.2, Math.PI * 0.85);
         ctx.stroke();
 
+        // Rosy blushing cheeks
+        ctx.fillStyle = 'rgba(244, 63, 94, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(r * 0.55, getSpineY(0.55) - r * 0.16, r * 0.14, r * 0.09, 0, 0, Math.PI * 2);
+        ctx.ellipse(r * 0.55, getSpineY(0.55) + r * 0.16, r * 0.14, r * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
+
         // 6 Branching feathered gills swaying in the current
         const gillSway = Math.sin(now * 0.005) * 4;
         ctx.fillStyle = '#f43f5e';
@@ -890,6 +899,42 @@ function drawSingleFishOrEgg(fish, now) {
                 ctx.fill();
             }
         });
+    } else if (patternId === 'dumbo_octopus') {
+        // Rosy Dumbo Octopus: Flapping ear fins + blush cheeks + curled mini tentacles
+        const earFlap = Math.sin(now * 0.008) * 0.35;
+        ctx.fillStyle = '#f472b6';
+        // Flapping ear fins
+        ctx.beginPath();
+        ctx.ellipse(r * 0.05, getSpineY(0.05) - r * 0.55, r * 0.32, r * 0.2, earFlap - 0.25, 0, Math.PI * 2);
+        ctx.ellipse(r * 0.05, getSpineY(0.05) + r * 0.55, r * 0.32, r * 0.2, -earFlap + 0.25, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rosy blush cheeks
+        ctx.fillStyle = 'rgba(251, 113, 133, 0.55)';
+        ctx.beginPath();
+        ctx.arc(r * 0.42, getSpineY(0.42) - r * 0.16, r * 0.12, 0, Math.PI * 2);
+        ctx.arc(r * 0.42, getSpineY(0.42) + r * 0.16, r * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Little sweet smile
+        ctx.strokeStyle = '#e11d48';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(r * 0.58, getSpineY(0.58), r * 0.14, 0.2, Math.PI * 0.85);
+        ctx.stroke();
+
+        // Curled tentacles at rear
+        ctx.strokeStyle = '#fb7185';
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        for (let t = -3; t <= 3; t++) {
+            if (t === 0) continue;
+            const tWave = Math.sin(now * 0.006 + t) * 3;
+            ctx.beginPath();
+            ctx.moveTo(-r * 0.5, getSpineY(-0.5) + t * r * 0.1);
+            ctx.quadraticCurveTo(-r * 0.85, getSpineY(-0.5) + t * r * 0.12 + tWave, -r * 1.05, getSpineY(-0.5) + t * r * 0.08 + tWave * 1.2);
+            ctx.stroke();
+        }
     } else if (patternId === 'glass_catfish') {
         // Phantom Glass Catfish: Segmented flexing spinal cord, chevron ribs, & beating organ sac
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';

@@ -176,6 +176,23 @@ function drawPerformanceProfiler(now) {
     ctx.restore();
 }
 
+function drawHeartBubble(ctx, x, y, size, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    const s = Math.max(0.45, size * 0.12);
+    ctx.scale(s, s);
+    ctx.beginPath();
+    ctx.moveTo(0, 3);
+    ctx.bezierCurveTo(-6, -4, -12, 2, 0, 12);
+    ctx.bezierCurveTo(12, 2, 6, -4, 0, 3);
+    ctx.fillStyle = color || 'rgba(244, 114, 182, 0.32)';
+    ctx.strokeStyle = 'rgba(251, 207, 232, 0.75)';
+    ctx.lineWidth = 1.2;
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+}
+
 function drawBubbles(now) {
     if (bubbles.length > 55) {
         bubbles.length = 55;
@@ -185,6 +202,8 @@ function drawBubbles(now) {
     ctx.fillStyle = 'rgba(224, 242, 254, 0.16)';
     ctx.lineWidth = 1;
     const spdMult = 0.85 + Math.min(simSpeed, 2) * 0.15;
+    const isFairytale = state.currentBiome === 'fairytale_reef';
+
     for (let i = bubbles.length - 1; i >= 0; i--) {
         const b = bubbles[i];
         b.y -= b.speed * spdMult;
@@ -194,12 +213,17 @@ function drawBubbles(now) {
         if (b.y < 82) {
             b.y = substrateY - 10;
             b.x = Math.random() * cw;
+            b.isHeart = Math.random() < 0.28 || isFairytale;
         }
 
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        if (b.isHeart || isFairytale) {
+            drawHeartBubble(ctx, b.x, b.y, b.r * 1.5, 'rgba(244, 114, 182, 0.28)');
+        } else {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
     }
     ctx.restore();
 }
@@ -280,6 +304,15 @@ function drawRipplesAndFloatingText() {
         if (sp.style === 'heart') {
             ctx.font = '12px sans-serif';
             ctx.fillText('💖', sp.x, sp.y);
+        } else if (sp.style === 'stardust') {
+            const r = sp.r * 1.35;
+            ctx.beginPath();
+            ctx.moveTo(sp.x, sp.y - r * 1.5);
+            ctx.quadraticCurveTo(sp.x, sp.y, sp.x + r * 1.5, sp.y);
+            ctx.quadraticCurveTo(sp.x, sp.y, sp.x, sp.y + r * 1.5);
+            ctx.quadraticCurveTo(sp.x, sp.y, sp.x - r * 1.5, sp.y);
+            ctx.quadraticCurveTo(sp.x, sp.y, sp.x, sp.y - r * 1.5);
+            ctx.fill();
         } else {
             ctx.beginPath();
             ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);

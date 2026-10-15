@@ -1028,70 +1028,155 @@ function drawDecorations(now, layer = 'all') {
             });
             ctx.restore();
 
-        } else if (d.id === 'atlantis_portal') {
-            // Sunken Atlantis Runestone Portal - Carved monolith archway with pulsing vortex
+        } else if (d.id === 'pearl_shell_castle') {
+            // Lâu đài Vỏ sò Xà cừ (Pearl Shell Castle)
             ctx.save();
-            const portalPulse = 0.5 + Math.sin(now * 0.004) * 0.5;
+            const glowPulse = 0.5 + Math.sin(now * 0.003) * 0.5;
 
-            // Swirling Cyan Energy Vortex Field
-            const vortexGrad = ctx.createRadialGradient(0, -75, 4, 0, -75, 48);
-            vortexGrad.addColorStop(0, `rgba(165, 243, 252, ${0.45 + portalPulse * 0.25})`);
-            vortexGrad.addColorStop(0.55, `rgba(6, 182, 212, ${0.28 + portalPulse * 0.15})`);
-            vortexGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
-            ctx.fillStyle = vortexGrad;
+            // Outer Shell Fan (Mother of Pearl)
+            const shellGrad = ctx.createLinearGradient(0, -130, 0, 0);
+            shellGrad.addColorStop(0, '#fce7f3');
+            shellGrad.addColorStop(0.5, '#f472b6');
+            shellGrad.addColorStop(1, '#db2777');
+            ctx.fillStyle = shellGrad;
+            ctx.strokeStyle = '#fbcfe8';
+            ctx.lineWidth = 2;
+
             ctx.beginPath();
-            ctx.ellipse(0, -75, 34, 52, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Runestone Archway
-            ctx.fillStyle = '#0f172a';
-            ctx.strokeStyle = '#38bdf8';
-            ctx.lineWidth = 2.4;
-
-            // Left Pillar
-            ctx.beginPath();
-            ctx.rect(-42, -135, 14, 135);
+            ctx.moveTo(-50, 0);
+            ctx.bezierCurveTo(-65, -70, -40, -130, 0, -135);
+            ctx.bezierCurveTo(40, -130, 65, -70, 50, 0);
+            ctx.closePath();
             ctx.fill();
             ctx.stroke();
 
-            // Right Pillar
-            ctx.beginPath();
-            ctx.rect(28, -135, 14, 135);
-            ctx.fill();
-            ctx.stroke();
+            // Shell Rib Grooves
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+            ctx.lineWidth = 1.6;
+            [-32, -16, 0, 16, 32].forEach(rx => {
+                ctx.beginPath();
+                ctx.moveTo(rx * 0.35, 0);
+                ctx.quadraticCurveTo(rx * 0.8, -75, rx * 1.3, -125);
+                ctx.stroke();
+            });
 
-            // Top Monolith Lintel
+            // Giant Glowing Pearl in the center
+            const pearlGrad = ctx.createRadialGradient(-4, -45, 2, 0, -42, 22);
+            pearlGrad.addColorStop(0, '#ffffff');
+            pearlGrad.addColorStop(0.4, '#fdf2f8');
+            pearlGrad.addColorStop(0.85, '#f472b6');
+            pearlGrad.addColorStop(1, '#be185d');
+            ctx.fillStyle = pearlGrad;
+            ctx.shadowColor = '#f472b6';
+            ctx.shadowBlur = 12 + glowPulse * 10;
             ctx.beginPath();
-            ctx.rect(-50, -152, 100, 18);
+            ctx.arc(0, -42, 20, 0, Math.PI * 2);
             ctx.fill();
-            ctx.stroke();
-
-            // Glowing Rune glyphs
-            ctx.fillStyle = `rgba(56, 189, 248, ${0.7 + portalPulse * 0.3})`;
-            ctx.shadowColor = '#06b6d4';
-            ctx.shadowBlur = 8;
-            for (let ry = -120; ry <= -25; ry += 30) {
-                ctx.fillRect(-37, ry, 4, 14);
-                ctx.fillRect(33, ry, 4, 14);
-            }
-            ctx.fillRect(-8, -145, 16, 5);
             ctx.shadowBlur = 0;
 
-            // Ambient rising energy spark
-            if (Math.random() < 0.06 && typeof fxSparks !== 'undefined') {
-                fxSparks.push({
-                    x: x + (Math.random() - 0.5) * 35,
-                    y: baseY - 75 + (Math.random() - 0.5) * 40,
-                    vx: (Math.random() - 0.5) * 0.5,
-                    vy: -1.2 - Math.random() * 0.8,
-                    size: 2.2,
-                    color: '#67e8f9',
-                    life: 50,
-                    maxLife: 50,
-                    alpha: 0.9,
-                    style: 'sparkle'
-                });
-            }
+            // Fairy Castle Turrets & Arches at base
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.fillRect(-28, -22, 12, 22);
+            ctx.fillRect(16, -22, 12, 22);
+            ctx.fillRect(-8, -28, 16, 28);
+            ctx.fillStyle = '#f43f5e';
+            ctx.beginPath();
+            ctx.moveTo(-28, -22); ctx.lineTo(-22, -34); ctx.lineTo(-16, -22); ctx.fill();
+            ctx.moveTo(16, -22); ctx.lineTo(22, -34); ctx.lineTo(28, -22); ctx.fill();
+            ctx.moveTo(-8, -28); ctx.lineTo(0, -42); ctx.lineTo(8, -28); ctx.fill();
+
+            ctx.restore();
+
+        } else if (d.id === 'pink_glow_coral') {
+            // San Hô Hồng Dạ Quang (Sakura Coral)
+            ctx.save();
+            const branches = [-35, -20, -6, 12, 28];
+            const coralGrad = ctx.createLinearGradient(0, -115, 0, 0);
+            coralGrad.addColorStop(0, '#fda4af');
+            coralGrad.addColorStop(0.5, '#fb7185');
+            coralGrad.addColorStop(1, '#e11d48');
+
+            branches.forEach((bx, idx) => {
+                const bSway = Math.sin(now * 0.0025 + idx * 0.8) * 4 * growthRatio;
+                const h = (75 + (idx % 2 === 0 ? 35 : 15)) * growthRatio;
+                ctx.fillStyle = coralGrad;
+                ctx.beginPath();
+                ctx.moveTo(bx * 0.4, 0);
+                ctx.quadraticCurveTo(bx * 0.8, -h * 0.5, bx + bSway, -h);
+                ctx.quadraticCurveTo(bx * 0.3, -h * 0.5, bx * 0.1, 0);
+                ctx.fill();
+
+                // Glowing Sakura Polyp Flower at tip
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = '#f43f5e';
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.arc(bx + bSway, -h, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+            ctx.restore();
+
+        } else if (d.id === 'fortune_bottle') {
+            // Chai Thủy Tinh Lời Nhắn (Fortune Bottle)
+            ctx.save();
+            const floatBob = Math.sin(now * 0.003) * 3;
+            ctx.translate(0, floatBob);
+
+            // Glowing Heart Aura
+            ctx.shadowColor = '#f472b6';
+            ctx.shadowBlur = 10;
+
+            // Glass Bottle Body
+            ctx.fillStyle = 'rgba(240, 249, 255, 0.42)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 1.8;
+
+            ctx.beginPath();
+            ctx.moveTo(-16, -15);
+            ctx.quadraticCurveTo(-22, -28, -8, -52); // shoulder
+            ctx.lineTo(-6, -64);                     // neck
+            ctx.lineTo(6, -64);
+            ctx.lineTo(8, -52);
+            ctx.quadraticCurveTo(22, -28, 16, -15);
+            ctx.quadraticCurveTo(0, -4, -16, -15);
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Wooden Cork Stopper
+            ctx.fillStyle = '#d97706';
+            ctx.fillRect(-5, -72, 10, 9);
+
+            // Pink Ribbon Bow
+            ctx.fillStyle = '#f43f5e';
+            ctx.beginPath();
+            ctx.arc(-7, -60, 4, 0, Math.PI * 2);
+            ctx.arc(7, -60, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillRect(-3, -62, 6, 4);
+
+            // Rolled Parchment Scroll inside bottle
+            ctx.fillStyle = '#fef08a';
+            ctx.strokeStyle = '#ca8a04';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(-8, -42, 16, 26, 3);
+            ctx.fill();
+            ctx.stroke();
+
+            // Red string on scroll
+            ctx.strokeStyle = '#e11d48';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-8, -29);
+            ctx.lineTo(8, -29);
+            ctx.stroke();
+
+            // Floating mini heart badge indicator
+            ctx.font = '12px sans-serif';
+            ctx.fillText('💌', -8, -78);
+
             ctx.restore();
         }
 

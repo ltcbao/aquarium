@@ -44,6 +44,15 @@ const LIGHT_THEMES = [
         botGrad: '#02020a',
         rayColor: 'rgba(217, 70, 239, 0.11)',
         surfaceGlow: 'rgba(34, 211, 238, 0.48)'
+    },
+    {
+        id: 'cotton_candy',
+        name: 'Pastel Dream LED',
+        topGrad: '#3b1d3d',
+        midGrad: '#221129',
+        botGrad: '#0e0612',
+        rayColor: 'rgba(244, 114, 182, 0.16)',
+        surfaceGlow: 'rgba(251, 113, 133, 0.45)'
     }
 ];
 
@@ -116,6 +125,23 @@ const BIOMES_CATALOG = [
         particleType: 'neon_sparks',
         lightBonus: 1.1,
         waterPurityBonus: 1.0
+    },
+    {
+        id: 'fairytale_reef',
+        name: 'Vườn San Hô Kẹo Ngọt (Fairytale)',
+        shortName: 'Kẹo Ngọt',
+        icon: 'ph-heart',
+        desc: 'Vương quốc cổ tích lung linh với nước hồng phấn Pastel, tím lavender dịu êm và cát ngọc trai óng ánh.',
+        topGrad: '#4a154b',
+        midGrad: '#2c1236',
+        botGrad: '#11071f',
+        sandColors: ['#fce7f3', '#fbcfe8', '#f472b6'],
+        sandRim: 'rgba(244, 114, 182, 0.65)',
+        causticColor: 'rgba(244, 114, 182, 0.22)',
+        silhouetteStyle: 'fairytale_castle',
+        particleType: 'stardust',
+        lightBonus: 1.2,
+        waterPurityBonus: 1.15
     }
 ];
 

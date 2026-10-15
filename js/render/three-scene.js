@@ -459,6 +459,12 @@ export function updateThreeEnvironment() {
             botC = safeColor('#020617', 0x020617);
             if (lightSun) lightSun.color.set(0xd946ef);
             if (lightAmbient) lightAmbient.color.set(0x06b6d4);
+        } else if (baseTheme.id === 'cotton_candy') {
+            topC = safeColor('#4a044e', 0x4a044e);
+            midC = safeColor('#701a75', 0x701a75);
+            botC = safeColor('#2e1065', 0x2e1065);
+            if (lightSun) lightSun.color.set(0xf472b6); // Soft glowing pink sun
+            if (lightAmbient) lightAmbient.color.set(0xfbcfe8); // Lavender pink ambient
         } else {
             // Daylight
             if (lightAmbient) lightAmbient.color.set(0x0f4d50);
@@ -477,7 +483,9 @@ export function updateThreeEnvironment() {
 
     // Sand color tone per biome
     if (sandMesh && sandMesh.material) {
-        if (biome && biome.id === 'cyber_trench') {
+        if (biome && biome.id === 'fairytale_reef') {
+            sandMesh.material.color.set(0xfce7f3); // Soft shimmering pastel pink sand
+        } else if (biome && biome.id === 'cyber_trench') {
             sandMesh.material.color.set(0x1e293b);
         } else if (biome && biome.id === 'coral_reef') {
             sandMesh.material.color.set(0xf5ebe0); // White coral sand
@@ -503,6 +511,10 @@ function getFishCrossSection(t, len, h, w, shape = 'fusiform') {
     if (shape === 'cory') {
         if (clampedT > 0.52) rY *= (1.0 + (clampedT - 0.52) * 0.42);
         rZ *= 1.15;
+    } else if (shape === 'dumbo') {
+        // Bulbous rounded cute bell head for dumbo octopus
+        rY *= 1.35;
+        rZ *= 1.35;
     } else if (shape === 'ribbon') {
         rZ *= (0.35 + clampedT * 0.65);
     }
@@ -682,6 +694,7 @@ function createProceduralFishMesh(spec, fish) {
     const isBetta = shape === 'betta' || shape === 'guppy';
     const isRibbon = shape === 'ribbon';
     const isCory = shape === 'cory';
+    const isDumbo = shape === 'dumbo';
 
     // Dimension scaling
     let len = baseL;
@@ -704,6 +717,10 @@ function createProceduralFishMesh(spec, fish) {
         len = baseL * 0.85;
         h = baseL * 0.46;
         w = baseL * 0.32;
+    } else if (isDumbo) {
+        len = baseL * 0.85;
+        h = baseL * 0.58;
+        w = baseL * 0.58;
     }
 
     // Morph handling
@@ -837,6 +854,50 @@ function createProceduralFishMesh(spec, fish) {
         rBarbel = new THREE.Mesh(barbelGeo, barbelMat);
         rBarbel.position.set(snoutProfile.x, snoutProfile.yOffset - snoutProfile.rY * 0.55, -barbelZ);
         group.add(rBarbel);
+    }
+
+    // 6.5. Cute Features: External Gills for Pink Axolotl & Flapping Ears for Dumbo Octopus
+    if (spec.id === 'pink_axolotl') {
+        const gillMat = new THREE.MeshStandardMaterial({
+            color: 0xf43f5e,
+            roughness: 0.35,
+            emissive: 0x9f1239,
+            emissiveIntensity: 0.2
+        });
+        for (let side of [1, -1]) {
+            for (let g = 0; g < 3; g++) {
+                const gillGeo = new THREE.CylinderGeometry(0.7, 0.25, len * (0.26 - g * 0.04), 5);
+                gillGeo.rotateZ(Math.PI * 0.35 * side);
+                gillGeo.rotateY(side * (g - 1) * 0.2);
+                const gill = new THREE.Mesh(gillGeo, gillMat);
+                gill.position.set(headProfile.x * 0.2 - g * 1.8, headProfile.yOffset + headProfile.rY * (0.35 + g * 0.22), side * (headProfile.rZ * 0.85 + 1.2));
+                group.add(gill);
+            }
+        }
+    } else if (isDumbo) {
+        const earLen = len * 0.35;
+        const earH = h * 0.35;
+        const earGeo = new THREE.PlaneGeometry(earLen, earH, 2, 2);
+        earGeo.translate(-earLen * 0.5, 0, 0);
+        const earMat = new THREE.MeshStandardMaterial({
+            color: finColor,
+            roughness: 0.3,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.88
+        });
+
+        const leftEar = new THREE.Mesh(earGeo, earMat);
+        leftEar.position.set(headProfile.x * 0.3, headProfile.yOffset + headProfile.rY * 0.88, headProfile.rZ * 0.75);
+        leftEar.rotation.set(-0.35, 0.25, 0.5);
+        leftEar.name = 'leftEar';
+        group.add(leftEar);
+
+        const rightEar = new THREE.Mesh(earGeo, earMat);
+        rightEar.position.set(headProfile.x * 0.3, headProfile.yOffset + headProfile.rY * 0.88, -headProfile.rZ * 0.75);
+        rightEar.rotation.set(0.35, -0.25, 0.5);
+        rightEar.name = 'rightEar';
+        group.add(rightEar);
     }
 
     // 7. Expressive Jewel Eyes (Embedded in skull socket, eliminating floating detached spheres)
@@ -1106,6 +1167,79 @@ function createSingleDecor3D(decorId, cat) {
         const col = new THREE.Mesh(colGeo, colMat);
         col.castShadow = true;
         group.add(col);
+    } else if (decorId === 'pearl_shell_castle') {
+        // Mother of pearl shell castle with glowing giant pearl
+        const shellGeo = new THREE.SphereGeometry(38, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.55);
+        shellGeo.rotateX(Math.PI);
+        shellGeo.translate(0, 30, 0);
+        const shellMat = new THREE.MeshStandardMaterial({
+            color: 0xfce7f3,
+            roughness: 0.28,
+            metalness: 0.35
+        });
+        const shell = new THREE.Mesh(shellGeo, shellMat);
+        shell.castShadow = true;
+        group.add(shell);
+
+        // Giant lustrous pearl inside
+        const pearlGeo = new THREE.SphereGeometry(14, 16, 16);
+        const pearlMat = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.15,
+            metalness: 0.85,
+            emissive: 0xfbcfe8,
+            emissiveIntensity: 0.4
+        });
+        const pearl = new THREE.Mesh(pearlGeo, pearlMat);
+        pearl.position.set(0, 20, 0);
+        group.add(pearl);
+    } else if (decorId === 'pink_glow_coral') {
+        // Glowing Sakura Coral Tree
+        const coralMat = new THREE.MeshStandardMaterial({
+            color: 0xf472b6,
+            roughness: 0.4,
+            emissive: 0xdb2777,
+            emissiveIntensity: 0.25
+        });
+        for (let c = 0; c < 5; c++) {
+            const branchGeo = new THREE.CylinderGeometry(4 - c * 0.5, 7 - c * 0.5, 80 - c * 10, 8);
+            branchGeo.translate(0, 40 - c * 5, 0);
+            const branch = new THREE.Mesh(branchGeo, coralMat);
+            branch.rotation.z = (c - 2) * 0.28;
+            branch.rotation.y = c * 0.8;
+            branch.castShadow = true;
+            group.add(branch);
+        }
+    } else if (decorId === 'fortune_bottle') {
+        // Glass wishing message bottle with cork & parchment scroll inside
+        const bottleGeo = new THREE.CylinderGeometry(10, 13, 38, 12);
+        bottleGeo.translate(0, 19, 0);
+        const bottleMat = new THREE.MeshPhysicalMaterial({
+            color: 0xe0f2fe,
+            transparent: true,
+            opacity: 0.55,
+            transmission: 0.9,
+            roughness: 0.1,
+            ior: 1.2
+        });
+        const bottle = new THREE.Mesh(bottleGeo, bottleMat);
+        bottle.castShadow = true;
+        group.add(bottle);
+
+        // Cork stopper
+        const corkGeo = new THREE.CylinderGeometry(6.5, 5.5, 9, 8);
+        corkGeo.translate(0, 41, 0);
+        const corkMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.8 });
+        const cork = new THREE.Mesh(corkGeo, corkMat);
+        group.add(cork);
+
+        // Parchment scroll inside
+        const scrollGeo = new THREE.CylinderGeometry(4.5, 4.5, 24, 8);
+        scrollGeo.translate(0, 15, 0);
+        const scrollMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.6 });
+        const scroll = new THREE.Mesh(scrollGeo, scrollMat);
+        scroll.rotation.z = 0.15;
+        group.add(scroll);
     } else {
         // Lush Live Aquascape Plant with Layered Radiating Stems
         const stemMat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.55, side: THREE.DoubleSide });
@@ -1276,6 +1410,29 @@ function onCanvas3DClick(event) {
     mouseVec.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     raycaster.setFromCamera(mouseVec, threeCamera);
+
+    // 1. Check if user clicked on Fortune Bottle in 3D
+    if (decorGroup && currentMode !== 'decorate') {
+        const decorIntersects = raycaster.intersectObjects(decorGroup.children, true);
+        if (decorIntersects.length > 0) {
+            let hit = decorIntersects[0].object;
+            while (hit.parent && hit.parent !== decorGroup) {
+                hit = hit.parent;
+            }
+            for (const [uid, mesh] of decorMeshMap.entries()) {
+                if (mesh === hit) {
+                    const dec = state.decorations.find(d => d.uid === uid);
+                    if (dec && dec.id === 'fortune_bottle') {
+                        if (typeof openDailyFortuneModal === 'function') {
+                            openDailyFortuneModal();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     const intersects = raycaster.intersectObjects(fishGroup.children, true);
 
     if (intersects.length > 0) {
@@ -1284,7 +1441,17 @@ function onCanvas3DClick(event) {
             hitObj = hitObj.parent;
         }
         if (hitObj.userData && hitObj.userData.fishId) {
-            if (typeof selectFish === 'function') {
+            const f = state.fish.find(item => item.id === hitObj.userData.fishId);
+            if (f) {
+                f.hunger = Math.min(100, (f.hunger || 50) + 2);
+                if (typeof playSound === 'function') playSound('affection');
+                if (typeof showToast === 'function') {
+                    showToast(`❤️ Đang vuốt ve ${f.customName || f.species}! (｡♥‿♥｡)`, 'rose');
+                }
+            }
+            if (typeof openInspectorForFish === 'function') {
+                openInspectorForFish(hitObj.userData.fishId);
+            } else if (typeof selectFish === 'function') {
                 selectFish(hitObj.userData.fishId);
             }
         }

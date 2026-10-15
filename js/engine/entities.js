@@ -58,12 +58,13 @@ function initStarterAquarium() {
         },
         fish: [],
         decorations: [
-            { uid: generateId(), id: 'spiderwood_driftwood', xRatio: 0.18, growth: 100, stage: 'mature', health: 100 },
-            { uid: generateId(), id: 'anubias_log', xRatio: 0.32, growth: 100, stage: 'flowering', health: 100 },
-            { uid: generateId(), id: 'seiryu_rock_ridge', xRatio: 0.48 },
-            { uid: generateId(), id: 'volcano_aerator_deluxe', xRatio: 0.62 },
-            { uid: generateId(), id: 'weeping_moss', xRatio: 0.76, growth: 95, stage: 'mature', health: 100 },
-            { uid: generateId(), id: 'marimo_moss', xRatio: 0.88, growth: 100, stage: 'mature', health: 100 }
+            { uid: generateId(), id: 'spiderwood_driftwood', xRatio: 0.16, growth: 100, stage: 'mature', health: 100 },
+            { uid: generateId(), id: 'anubias_log', xRatio: 0.28, growth: 100, stage: 'flowering', health: 100 },
+            { uid: generateId(), id: 'seiryu_rock_ridge', xRatio: 0.42 },
+            { uid: generateId(), id: 'pearl_shell_castle', xRatio: 0.56 },
+            { uid: generateId(), id: 'weeping_moss', xRatio: 0.70, growth: 95, stage: 'mature', health: 100 },
+            { uid: generateId(), id: 'fortune_bottle', xRatio: 0.84 },
+            { uid: generateId(), id: 'marimo_moss', xRatio: 0.92, growth: 100, stage: 'mature', health: 100 }
         ],
         waste: [],
         discoveredDex: {},
@@ -74,13 +75,13 @@ function initStarterAquarium() {
     };
 
     // Starter showcase featuring classics & newly added species:
+    state.fish.push(createFishEntity('pink_axolotl', 'adult', cw * 0.48, substrateY - 16));
+    state.fish.push(createFishEntity('dumbo_octopus', 'juvenile', cw * 0.62, ch * 0.40));
     state.fish.push(createFishEntity('cardinal_tetra', 'adult', cw * 0.32, ch * 0.42));
     state.fish.push(createFishEntity('cardinal_tetra', 'adult', cw * 0.38, ch * 0.46));
     state.fish.push(createFishEntity('mandarin_fish', 'adult', cw * 0.52, ch * 0.38));
-    state.fish.push(createFishEntity('kuhli_loach', 'adult', cw * 0.65, substrateY - 14));
     state.fish.push(createFishEntity('dragon_seahorse', 'juvenile', cw * 0.78, ch * 0.52));
-    state.fish.push(createFishEntity('neon_tetra', 'adult', cw * 0.25, ch * 0.35));
-    state.fish.push(createFishEntity('cherry_shrimp', 'adult', cw * 0.42, substrateY - 14));
+    state.fish.push(createFishEntity('cherry_shrimp', 'adult', cw * 0.22, substrateY - 14));
 }
 
 /**

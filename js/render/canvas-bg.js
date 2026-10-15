@@ -135,6 +135,36 @@ function drawWaterBackground(now) {
             ctx.fillRect(cx - 2, substrateY - 70, 4, 18);
             ctx.fillStyle = 'rgba(8, 7, 26, 0.52)';
         }
+    } else if (biome && biome.silhouetteStyle === 'fairytale_castle') {
+        // Fairytale Reef: Soft lavender castle spires and coral dunes
+        ctx.fillStyle = 'rgba(74, 21, 75, 0.42)';
+        ctx.beginPath();
+        ctx.moveTo(0, substrateY);
+        for (let x = 0; x <= cw; x += 60) {
+            const h = 45 + Math.sin((x + parallaxOffset) * 0.008) * 25;
+            ctx.lineTo(x, substrateY - h);
+        }
+        ctx.lineTo(cw, substrateY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Fairy spires & glowing fairy stars
+        for (let sx = 80; sx < cw; sx += 220) {
+            const px = sx + parallaxOffset * 0.6;
+            ctx.beginPath();
+            ctx.moveTo(px - 10, substrateY);
+            ctx.lineTo(px, substrateY - 120);
+            ctx.lineTo(px + 10, substrateY);
+            ctx.closePath();
+            ctx.fill();
+
+            const starGlow = 0.6 + Math.sin(now * 0.004 + sx) * 0.4;
+            ctx.fillStyle = `rgba(244, 114, 182, ${0.45 * starGlow})`;
+            ctx.beginPath();
+            ctx.arc(px, substrateY - 125, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(74, 21, 75, 0.42)';
+        }
     } else {
         // Cyber Trench: Thermal chimney spires with cyan/purple bioluminescent vents
         ctx.fillStyle = 'rgba(2, 4, 18, 0.58)';

@@ -306,5 +306,44 @@ const DECOR_CATALOG = [
         desc: 'Ancient sunken Atlantean monolith archway glowing with cyan runic energy and emitting rising prism bubbles.',
         width: 115,
         height: 150
+    },
+    {
+        id: 'pearl_shell_castle',
+        name: 'Lâu đài Vỏ sò Xà cừ (Pearl Shell Castle)',
+        category: 'Ornament',
+        isPlant: false,
+        cost: 120,
+        waterBonus: 0.55,
+        desc: 'Lâu đài cổ tích vỏ sò xà cừ phát sáng ánh ngọc trai cầu vồng dịu êm, nơi bầy cá yêu thích bơi vòng quanh.',
+        width: 125,
+        height: 135
+    },
+    {
+        id: 'pink_glow_coral',
+        name: 'San Hô Hồng Dạ Quang (Sakura Coral)',
+        category: 'Live Plant',
+        isPlant: true,
+        cost: 65,
+        waterBonus: 0.45,
+        desc: 'Cụm san hô hồng phấn phát sáng lân tinh lung linh, thanh lọc nước và bảo vệ đàn cá con.',
+        width: 80,
+        height: 115,
+        maxGrowth: 100,
+        growthSpeed: 0.08,
+        oxygenRate: 0.08,
+        pruneReward: 36,
+        flowerType: 'sakura_polyps'
+    },
+    {
+        id: 'fortune_bottle',
+        name: 'Chai Thủy Tinh Lời Nhắn (Fortune Bottle)',
+        category: 'Special',
+        isPlant: false,
+        isInteractiveBottle: true,
+        cost: 50,
+        waterBonus: 0.35,
+        desc: 'Chiếc chai thủy tinh thắt nơ hồng trôi dạt mang theo những thông điệp yêu thương và quẻ may mắn mỗi ngày!',
+        width: 50,
+        height: 70
     }
 ];

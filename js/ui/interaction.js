@@ -33,11 +33,36 @@ function handleCanvasPointerDown(clientX, clientY) {
         }
     }
 
+    // 0.5. Check if player clicked on the Daily Fortune Bottle!
+    if (state.decorations && currentMode !== 'decorate') {
+        const bottleDecor = state.decorations.find(d => d.id === 'fortune_bottle');
+        if (bottleDecor) {
+            const bx = bottleDecor.xRatio * cw;
+            const floorY = getSubstrateHeightAt(bx) + 6;
+            const by = bottleDecor.yRatio !== undefined ? (bottleDecor.yRatio * ch) : floorY;
+            if (Math.hypot(x - bx, y - (by - 35)) < 45) {
+                if (typeof openDailyFortuneModal === 'function') {
+                    openDailyFortuneModal();
+                    waterRipples.push({ x, y, r: 8, alpha: 0.9 });
+                    return;
+                }
+            }
+        }
+    }
+
     // Always allow clicking directly on a fish if close enough, or prioritize active mode
     const clickedFish = findFishAt(x, y);
 
-    if (currentMode === 'inspect' || (clickedFish && currentMode !== 'feed' && currentMode !== 'clean' && currentMode !== 'decorate')) {
-        if (clickedFish) {
+    if (clickedFish) {
+        // Petting Interaction: Fish nuzzles up toward touch, shoots heart bubbles, plays music box chime!
+        clickedFish.vx += (x - clickedFish.x) * 0.04;
+        clickedFish.vy = -1.2;
+        clickedFish.hunger = Math.min(100, (clickedFish.hunger || 50) + 2); // petting comforts fish
+        spawnParticleBurst(clickedFish.x, clickedFish.y - 14, '#f472b6', 12, 'heart');
+        addFloatingText(clickedFish.x, clickedFish.y - 25, '❤️ (｡♥‿♥｡)', '#f472b6');
+        playSound('affection');
+
+        if (currentMode === 'inspect' || (currentMode !== 'feed' && currentMode !== 'clean' && currentMode !== 'decorate')) {
             openInspectorForFish(clickedFish.id);
             waterRipples.push({ x, y, r: 6, alpha: 0.8 });
             return;
