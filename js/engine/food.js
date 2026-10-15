@@ -4,11 +4,11 @@ function addFloatingText(x, y, text, color = '#38bdf8') {
 }
 
 function spawnFoodPellet(x, y, type = 'flakes', free = false) {
-    let cost = 0, nutrition = 28, growthBoost = 2.5, healBoost = 0, xpBoost = 2, color = '#fbbf24', radius = 3.5;
+    let cost = 0, nutrition = 24, growthBoost = 0.08, healBoost = 0, xpBoost = 2, color = '#fbbf24', radius = 3.5;
     if (type === 'pellets') {
-        cost = 2; nutrition = 45; growthBoost = 6.5; xpBoost = 5; color = '#34d399'; radius = 4.5;
+        cost = 2; nutrition = 45; growthBoost = 0.18; xpBoost = 5; color = '#34d399'; radius = 4.5;
     } else if (type === 'medicated') {
-        cost = 4; nutrition = 30; growthBoost = 2.5; healBoost = 28; xpBoost = 4; color = '#fb7185'; radius = 4.5;
+        cost = 4; nutrition = 30; growthBoost = 0.12; healBoost = 25; xpBoost = 4; color = '#fb7185'; radius = 4.5;
     }
 
     if (!free && state.coins < cost) {

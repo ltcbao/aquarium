@@ -117,7 +117,7 @@ function updateFishPhysics(dtSeconds) {
                         state.waste.splice(wIdx, 1);
                         state.waterQuality = Math.min(100, state.waterQuality + 2.5);
                         fish.hunger = Math.min(100, fish.hunger + 22);
-                        fish.maturity += 2.0;
+                        fish.maturity += 0.08;
                         state.coins += 2;
                         addXP(4);
                         spawnParticleBurst(fish.x, fish.y, '#34d399', 8, 'sparkle');
@@ -256,11 +256,18 @@ function updateFishPhysics(dtSeconds) {
             }
         }
 
-        // Soft wall & surface avoidance
-        const margin = 75;
-        if (fish.x < margin) fish.vx += 0.18;
-        if (fish.x > cw - margin) fish.vx -= 0.18;
-        if (fish.y < topBound) fish.vy += 0.16;
+        // Soft wall & surface avoidance with smooth U-turn steering
+        const margin = 85;
+        if (fish.x < margin) {
+            fish.vx += 0.22;
+            const steerY = fish.y > (ch * 0.5) ? -0.16 : 0.16;
+            fish.vy += steerY;
+        } else if (fish.x > cw - margin) {
+            fish.vx -= 0.22;
+            const steerY = fish.y > (ch * 0.5) ? -0.16 : 0.16;
+            fish.vy += steerY;
+        }
+        if (fish.y < topBound) fish.vy += 0.18;
 
         const localFloor = getSubstrateHeightAt(fish.x) - (isBottomDweller ? 10 : 26);
         if (fish.y > localFloor) {
@@ -281,6 +288,12 @@ function updateFishPhysics(dtSeconds) {
             fish.vx *= 1.05;
         }
 
+        // Natural biological cruising undulation (Bơi uốn lượn dập dờn trong làn nước)
+        if (spec.bodyShape !== 'crab' && spec.bodyShape !== 'shrimp') {
+            const swimWave = Math.sin(fish.tailPhase * 0.9) * (0.24 + currentSpeed * 0.15);
+            fish.y += swimWave * Math.min(1.0, dtSeconds * 28);
+        }
+
         fish.x += fish.vx;
         fish.y += fish.vy;
 
@@ -288,8 +301,28 @@ function updateFishPhysics(dtSeconds) {
             fish.facing = fish.vx > 0 ? 1 : -1;
         }
 
+        // Smooth 3D turning interpolation (rate-limited turning arc through depth)
+        if (fish.renderFacing === undefined) fish.renderFacing = fish.facing || 1;
+        const targetFacing = fish.facing || 1;
+        fish.renderFacing += (targetFacing - fish.renderFacing) * Math.min(1, dtSeconds * 5.2);
+
+        // Dynamic turning spine curvature: bends body into a C-curve during turns
+        const turnDelta = targetFacing - fish.renderFacing;
+        if (fish.turnCurve === undefined) fish.turnCurve = 0;
+        const targetCurve = Math.abs(turnDelta) > 0.15 ? Math.sign(turnDelta) * Math.sin(Math.min(1, Math.abs(turnDelta) * 0.5) * Math.PI) * 0.75 : 0;
+        fish.turnCurve += (targetCurve - fish.turnCurve) * Math.min(1, dtSeconds * 7.5);
+
+        // Smooth pitch angle interpolation (prevent jerky angle tilting)
+        if (fish.pitchAngle === undefined) fish.pitchAngle = 0;
+        const targetPitch = Math.max(-0.35, Math.min(0.35, (fish.vy || 0) * 0.14)) * (fish.facing || 1);
+        fish.pitchAngle += (targetPitch - fish.pitchAngle) * Math.min(1, dtSeconds * 6.5);
+
+        // Natural burst-and-glide propulsion: subtle thrust at peak tail swing
+        const thrustPulse = Math.max(0, Math.sin(fish.tailPhase * 2)) * 0.018;
+        fish.vx += (fish.facing || 1) * thrustPulse;
+
         // Fin & Tail Oscillation proportional to velocity
-        fish.tailPhase += (0.14 + currentSpeed * 0.11);
+        fish.tailPhase += (0.13 + currentSpeed * 0.11);
         fish.finPhase += 0.095 + currentSpeed * 0.04;
 
         // Smooth decay of growth level-up effect

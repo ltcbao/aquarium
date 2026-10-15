@@ -42,6 +42,7 @@ let breedParentA = null;
 let breedParentB = null;
 let draggingDecor = null;
 let dragOffsetX = 0;
+let dragOffsetY = 0;
 
 // Environmental Events
 let activeTankEvent = null; // null or { id, title, banner, duration, remaining, color, icon }

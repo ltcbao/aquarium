@@ -43,4 +43,9 @@ function updateHUD() {
     if (fertCounter) {
         fertCounter.textContent = `🌱 ${state.fertilizerStock || 0} Fert.`;
     }
+
+    // Synchronize User Profile & Admin Badge
+    if (typeof updateUserProfileHUD === 'function') {
+        updateUserProfileHUD();
+    }
 }

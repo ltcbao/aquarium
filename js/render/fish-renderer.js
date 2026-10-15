@@ -9,10 +9,13 @@ function getCachedBodyGrad(specId, primary, secondary, r) {
     let grad = fishBodyGradCache.get(key);
     if (!grad) {
         if (fishBodyGradCache.size > 220) fishBodyGradCache.clear();
-        grad = ctx.createLinearGradient(0, -quantR * 0.75, 0, quantR * 0.75);
+        // True 3D Cylindrical Countershading (Dorsal Shadow -> Vibrant Flank -> Shimmering Lateral Line -> Silvery Pearl Belly)
+        grad = ctx.createLinearGradient(0, -quantR * 0.85, 0, quantR * 0.85);
         grad.addColorStop(0, primary);
-        grad.addColorStop(0.55, secondary);
-        grad.addColorStop(1, '#f8fafc');
+        grad.addColorStop(0.35, primary);
+        grad.addColorStop(0.65, secondary);
+        grad.addColorStop(0.92, '#f8fafc');
+        grad.addColorStop(1, 'rgba(241, 245, 249, 0.88)');
         fishBodyGradCache.set(key, grad);
     }
     return grad;
@@ -23,8 +26,9 @@ function getCachedGlossGrad(r) {
     let grad = fishGlossGradCache.get(quantR);
     if (!grad) {
         if (fishGlossGradCache.size > 60) fishGlossGradCache.clear();
-        grad = ctx.createLinearGradient(0, -quantR * 0.8, 0, 0);
-        grad.addColorStop(0, 'rgba(255, 255, 255, 0.36)');
+        grad = ctx.createLinearGradient(0, -quantR * 0.85, 0, -quantR * 0.1);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+        grad.addColorStop(0.4, 'rgba(255, 255, 255, 0.18)');
         grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
         fishGlossGradCache.set(quantR, grad);
     }
@@ -39,8 +43,9 @@ function getCachedTailGrad(primary, finColor, r) {
         if (fishTailGradCache.size > 220) fishTailGradCache.clear();
         grad = ctx.createLinearGradient(-quantR * 0.75, 0, -quantR * 2.4, 0);
         grad.addColorStop(0, primary);
-        grad.addColorStop(0.5, finColor || '#38bdf8');
-        grad.addColorStop(1, 'rgba(255, 255, 255, 0.12)');
+        grad.addColorStop(0.45, finColor || '#38bdf8');
+        grad.addColorStop(0.85, 'rgba(255, 255, 255, 0.38)');
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0.06)');
         fishTailGradCache.set(key, grad);
     }
     return grad;
@@ -102,58 +107,27 @@ function drawSingleFishOrEgg(fish, now) {
         ctx.globalAlpha = Math.max(0.58, 1.0 + depthZ * 0.42);
     }
 
-    // Dynamic Growth Celebration Aura & Rotating Sacred Geometry Ring
+    // Dynamic Growth Celebration Subtle Shimmer (without geometric circles)
     if (fish.growthTimer > 0) {
-        ctx.save();
         const gPulse = Math.sin(fish.growthTimer * Math.PI);
-        const auraCol = fish.stage === 'adult' ? '#fbbf24' : (fish.stage === 'juvenile' ? '#34d399' : '#38bdf8');
-        
-        // Rotating celestial halo
-        ctx.save();
-        ctx.rotate(now * 0.003);
-        ctx.strokeStyle = auraCol;
-        ctx.lineWidth = 2.2;
-        ctx.setLineDash([8, 6]);
-        ctx.beginPath();
-        ctx.arc(0, 0, spec.baseSize * 1.8 * depthScale + 8, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-
-        // Radiant expansion aura
-        const glowGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, spec.baseSize * 2.4 * depthScale);
-        glowGrad.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
-        glowGrad.addColorStop(0.35, auraCol);
-        glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = glowGrad;
-        ctx.globalAlpha = gPulse * 0.65;
-        ctx.beginPath();
-        ctx.arc(0, 0, spec.baseSize * 2.4 * depthScale, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        if (Math.random() < 0.2) {
+            spawnParticleBurst(fish.x, fish.y, fish.stage === 'adult' ? '#fbbf24' : '#34d399', 1, 'sparkle');
+        }
     }
 
-    // 3. Fast GPU-friendly Bioluminescent, Prismatic & Cosmic Aura Glow
-    if (isCosmic || isPrism || isNeonTheme || isLustre || (spec.rarity && spec.rarity.includes('VIP'))) {
-        const auraR = spec.baseSize * 1.4 * depthScale;
-        const auraCol = isCosmic
-            ? 'rgba(192, 132, 252, 0.22)'
-            : (isPrism ? `hsla(${hueShift}, 95%, 65%, 0.2)` : 'rgba(56, 189, 248, 0.16)');
-        ctx.fillStyle = auraCol;
-        ctx.beginPath();
-        ctx.arc(0, 0, auraR, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    // Selection halo if inspected
+    // Sleek Minimalist Selection Pointer (Eliminates the crude circular hoop around the fish body)
     if (fish.id === selectedFishId) {
         ctx.save();
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([6, 4]);
-        ctx.rotate(now * 0.0015);
+        const pointerY = -spec.baseSize * 1.35 * depthScale - 16 + Math.sin(now * 0.007) * 3;
+        ctx.fillStyle = '#38bdf8';
+        ctx.shadowColor = 'rgba(56, 189, 248, 0.6)';
+        ctx.shadowBlur = 8;
         ctx.beginPath();
-        ctx.arc(0, 0, spec.baseSize * 1.45 * depthScale + 10, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.moveTo(0, pointerY + 6);
+        ctx.lineTo(-5, pointerY - 2);
+        ctx.lineTo(5, pointerY - 2);
+        ctx.closePath();
+        ctx.fill();
         ctx.restore();
     }
 
@@ -300,11 +274,20 @@ function drawSingleFishOrEgg(fish, now) {
         return;
     }
 
-    // Standard & Specialized Directional Swimming Orientation
-    const bodyWiggle = Math.sin(fish.tailPhase) * 0.065;
-    const pitch = Math.max(-0.36, Math.min(0.36, fish.vy * 0.14)) * fish.facing + bodyWiggle;
-    ctx.scale(fish.facing, 1);
-    ctx.rotate(pitch);
+    // Realistic organic swimming kinematics with 3D turn transition & body undulation
+    const facing = fish.facing || 1;
+    const renderFacing = fish.renderFacing !== undefined ? fish.renderFacing : facing;
+    const bodyWiggle = Math.sin(fish.tailPhase) * 0.045;
+    const smoothPitch = (fish.pitchAngle !== undefined ? fish.pitchAngle : (Math.max(-0.35, Math.min(0.35, (fish.vy || 0) * 0.14)) * facing)) + bodyWiggle;
+
+    // 3D Volumetric Turn: never squashes to 0 flat cardboard; maintains volume and banks into the turn
+    const turnAbs = Math.abs(renderFacing);
+    const visualScaleX = Math.sign(renderFacing || 1) * (0.35 + 0.65 * turnAbs);
+    const visualScaleY = 1.0 + (1.0 - turnAbs) * 0.16; // 3D foreshortening depth
+    const bankTilt = (1.0 - turnAbs) * ((fish.vy || 0) < 0 ? -0.22 : 0.22) * Math.sign(renderFacing || 1);
+
+    ctx.scale(visualScaleX, visualScaleY);
+    ctx.rotate(smoothPitch + bankTilt);
 
     // SPECIAL RENDER 3: RED CHERRY SHRIMP
     if (spec.bodyShape === 'shrimp') {
@@ -385,9 +368,29 @@ function drawSingleFishOrEgg(fish, now) {
         return;
     }
 
-    const tailSwing = Math.sin(fish.tailPhase) * (r * 0.34);
-    const tailLag = Math.sin(fish.tailPhase - 0.85) * (r * 0.48);
-    const dorsalWave = Math.cos(fish.tailPhase - 0.6) * (r * 0.16);
+    // Living Flexible Spine Wave & Dynamic Turning Curvature (Bơi uốn lượn cả thân mình)
+    const turnBend = (fish.turnCurve || 0) * (r * 0.35);
+    const spineWave = Math.sin(fish.tailPhase - 0.7) * (r * 0.12);
+    const totalSpineFlex = spineWave + turnBend;
+
+    const tailSwing = Math.sin(fish.tailPhase) * (r * 0.34) + turnBend * 1.25;
+    const tailLag = Math.sin(fish.tailPhase - 0.85) * (r * 0.48) + turnBend * 1.5;
+    const dorsalWave = Math.cos(fish.tailPhase - 0.6) * (r * 0.16) + turnBend * 0.4;
+    const peduncleY = tailSwing * 0.45 + totalSpineFlex * 0.6;
+    const snoutY = -totalSpineFlex * 0.22;
+    const midSpineY = totalSpineFlex * 0.65;
+
+    // Organic Spine Mapping across normalized X (-1.2 at tail -> +1.2 at snout)
+    const getSpineY = (nx) => {
+        if (nx >= 0) {
+            const t = Math.min(1, Math.max(0, nx));
+            return midSpineY * (1 - t) + snoutY * t;
+        } else {
+            const t = Math.min(1, Math.max(0, -nx));
+            return midSpineY * (1 - t) + peduncleY * t;
+        }
+    };
+    const getSpineSlope = (nx) => (nx >= 0 ? (snoutY - midSpineY) : (midSpineY - peduncleY)) * 0.65;
 
     // 1. MULTI-LAYERED FLOWING CAUDAL (TAIL) FIN
     const tailGrad = getCachedTailGrad(primaryCol, spec.finColor, r);
@@ -395,42 +398,45 @@ function drawSingleFishOrEgg(fish, now) {
 
     ctx.beginPath();
     if (spec.bodyShape === 'betta' || spec.bodyShape === 'guppy' || spec.bodyShape === 'koi') {
-        ctx.moveTo(-r * 0.78, 0);
+        ctx.moveTo(-r * 0.78, peduncleY * 0.85);
         ctx.bezierCurveTo(-r * 1.35, -r * 1.25 + tailSwing, -r * 2.1, -r * 1.05 + tailLag, -r * 2.55, -r * 0.25 + tailLag * 1.25);
         ctx.quadraticCurveTo(-r * 2.75, tailLag * 1.35, -r * 2.55, r * 0.25 + tailLag * 1.25);
-        ctx.bezierCurveTo(-r * 2.1, r * 1.05 + tailLag, -r * 1.35, r * 1.25 + tailSwing, -r * 0.78, 0);
+        ctx.bezierCurveTo(-r * 2.1, r * 1.05 + tailLag, -r * 1.35, r * 1.25 + tailSwing, -r * 0.78, peduncleY * 0.85);
     } else if (spec.bodyShape === 'angel' || spec.bodyShape === 'discus') {
-        ctx.moveTo(-r * 0.8, 0);
+        ctx.moveTo(-r * 0.8, peduncleY);
         ctx.quadraticCurveTo(-r * 1.35, -r * 0.65 + tailSwing, -r * 2.05, -r * 0.92 + tailLag);
         ctx.quadraticCurveTo(-r * 1.5, tailSwing * 0.4, -r * 2.05, r * 0.92 + tailLag);
-        ctx.quadraticCurveTo(-r * 1.35, r * 0.65 + tailSwing, -r * 0.8, 0);
+        ctx.quadraticCurveTo(-r * 1.35, r * 0.65 + tailSwing, -r * 0.8, peduncleY);
     } else if (spec.bodyShape === 'arowana' || spec.bodyShape === 'flowerhorn') {
-        ctx.moveTo(-r * 1.05, 0);
+        ctx.moveTo(-r * 1.05, peduncleY);
         ctx.bezierCurveTo(-r * 1.55, -r * 0.72 + tailSwing, -r * 2.08, -r * 0.48 + tailLag, -r * 2.12, tailLag);
-        ctx.bezierCurveTo(-r * 2.08, r * 0.48 + tailLag, -r * 1.55, r * 0.72 + tailSwing, -r * 1.05, 0);
+        ctx.bezierCurveTo(-r * 2.08, r * 0.48 + tailLag, -r * 1.55, r * 0.72 + tailSwing, -r * 1.05, peduncleY);
     } else {
-        ctx.moveTo(-r * 0.85, 0);
+        ctx.moveTo(-r * 0.85, peduncleY);
         ctx.quadraticCurveTo(-r * 1.3, -r * 0.52 + tailSwing * 0.7, -r * 1.75, -r * 0.68 + tailLag);
-        ctx.lineTo(-r * 1.28, tailSwing * 0.35);
+        ctx.lineTo(-r * 1.28, peduncleY * 0.5 + tailSwing * 0.35);
         ctx.lineTo(-r * 1.75, r * 0.68 + tailLag);
-        ctx.quadraticCurveTo(-r * 1.3, r * 0.52 + tailSwing * 0.7, -r * 0.85, 0);
+        ctx.quadraticCurveTo(-r * 1.3, r * 0.52 + tailSwing * 0.7, -r * 0.85, peduncleY);
     }
     ctx.closePath();
     ctx.fill();
 
-    // Delicate Iridescent Fin Rays on Caudal Fin
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
-    ctx.lineWidth = 0.85;
-    const rayCount = (spec.bodyShape === 'betta' || spec.bodyShape === 'guppy' || spec.bodyShape === 'koi') ? 6 : 4;
+    // Delicate Iridescent Fin Rays on Caudal Fin with Progressive Sinuous Phase Lag
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.38)';
+    ctx.lineWidth = Math.max(0.75, r * 0.038);
+    const rayCount = (spec.bodyShape === 'betta' || spec.bodyShape === 'guppy' || spec.bodyShape === 'koi') ? 7 : 5;
     ctx.beginPath();
     for (let i = 0; i < rayCount; i++) {
-        const spread = (i / (rayCount - 1) - 0.5) * 1.3;
-        ctx.moveTo(-r * 0.85, 0);
-        ctx.quadraticCurveTo(
+        const spread = (i / (rayCount - 1) - 0.5) * 1.35;
+        const tipLag = Math.sin(fish.tailPhase - 1.1 + i * 0.22) * (r * 0.32) + turnBend * 1.5;
+        ctx.moveTo(-r * 0.85, peduncleY * 0.8);
+        ctx.bezierCurveTo(
             -r * 1.35,
-            r * spread * 0.5 + tailSwing,
-            -r * 1.72,
-            r * spread * 0.75 + tailLag
+            r * spread * 0.55 + tailSwing,
+            -r * 1.82,
+            r * spread * 0.88 + tailLag,
+            -r * 2.15,
+            r * spread * 1.12 + tipLag
         );
     }
     ctx.stroke();
@@ -494,39 +500,42 @@ function drawSingleFishOrEgg(fish, now) {
         ctx.fill();
     }
 
-    // 3. SCULPTED 3D BODY SILHOUETTE & IRIDESCENT SHADER
+    // 3. SCULPTED 3D BODY SILHOUETTE & IRIDESCENT SHADER (Flexible Undulating Spine)
     ctx.beginPath();
     if (spec.bodyShape === 'discus') {
-        ctx.ellipse(0, 0, r * 0.96, r * 0.9, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, midSpineY * 0.4, r * 0.96, r * 0.9, 0, 0, Math.PI * 2);
     } else if (spec.bodyShape === 'angel') {
-        ctx.moveTo(r * 0.95, 0);
-        ctx.quadraticCurveTo(r * 0.2, -r * 0.95, -r * 0.88, 0);
-        ctx.quadraticCurveTo(r * 0.2, r * 0.95, r * 0.95, 0);
+        ctx.moveTo(r * 0.95, snoutY);
+        ctx.quadraticCurveTo(r * 0.2, -r * 0.95 + midSpineY, -r * 0.88, peduncleY);
+        ctx.quadraticCurveTo(r * 0.2, r * 0.95 + midSpineY, r * 0.95, snoutY);
     } else if (spec.bodyShape === 'arowana') {
-        ctx.ellipse(0, 0, r * 1.38, r * 0.43, 0, 0, Math.PI * 2);
+        ctx.moveTo(r * 1.38, snoutY);
+        ctx.bezierCurveTo(r * 0.6, -r * 0.45 + midSpineY, -r * 0.5, -r * 0.4 + midSpineY * 1.1, -r * 1.25, peduncleY);
+        ctx.bezierCurveTo(-r * 0.5, r * 0.4 + midSpineY * 1.1, r * 0.6, r * 0.45 + midSpineY, r * 1.38, snoutY);
     } else if (spec.bodyShape === 'flowerhorn') {
-        ctx.ellipse(-r * 0.05, 0, r * 1.05, r * 0.64, 0, 0, Math.PI * 2);
-        ctx.arc(r * 0.62, -r * 0.44, r * 0.42, 0, Math.PI * 2);
+        ctx.ellipse(-r * 0.05, midSpineY * 0.35, r * 1.05, r * 0.64, 0, 0, Math.PI * 2);
+        ctx.arc(r * 0.62, -r * 0.44 + snoutY, r * 0.42, 0, Math.PI * 2);
     } else if (spec.bodyShape === 'pleco' || spec.bodyShape === 'cory') {
-        ctx.moveTo(r * 1.08, r * 0.25);
-        ctx.bezierCurveTo(r * 0.65, -r * 0.72, -r * 0.35, -r * 0.62, -r * 1.05, r * 0.12);
-        ctx.lineTo(r * 1.08, r * 0.25);
-    } else if (spec.bodyShape === 'eel') {
-        ctx.ellipse(0, 0, r * 1.48, r * 0.3, 0, 0, Math.PI * 2);
+        ctx.moveTo(r * 1.08, r * 0.25 + snoutY);
+        ctx.bezierCurveTo(r * 0.65, -r * 0.72 + midSpineY, -r * 0.35, -r * 0.62 + midSpineY * 1.1, -r * 1.05, r * 0.12 + peduncleY);
+        ctx.lineTo(r * 1.08, r * 0.25 + snoutY);
+    } else if (spec.bodyShape === 'eel' || spec.bodyShape === 'ribbon') {
+        ctx.moveTo(r * 1.35, snoutY);
+        ctx.bezierCurveTo(r * 0.45, -r * 0.32 + spineWave * 0.8, -r * 0.45, -r * 0.28 + totalSpineFlex * 1.2, -r * 1.45, tailSwing * 0.65 + totalSpineFlex * 1.4);
+        ctx.bezierCurveTo(-r * 0.45, r * 0.28 + totalSpineFlex * 1.2, r * 0.45, r * 0.32 + spineWave * 0.8, r * 1.35, snoutY);
     } else if (spec.bodyShape === 'hatchet') {
-        ctx.moveTo(r * 1.02, -r * 0.2);
-        ctx.lineTo(-r * 0.92, -r * 0.15);
-        ctx.quadraticCurveTo(-r * 0.1, r * 1.15, r * 1.02, -r * 0.2);
+        ctx.moveTo(r * 1.02, -r * 0.2 + snoutY);
+        ctx.lineTo(-r * 0.92, -r * 0.15 + peduncleY);
+        ctx.quadraticCurveTo(-r * 0.1, r * 1.15 + midSpineY, r * 1.02, -r * 0.2 + snoutY);
     } else if (spec.bodyShape === 'axolotl') {
-        ctx.ellipse(-r * 0.1, 0, r * 1.25, r * 0.46, 0, 0, Math.PI * 2);
+        ctx.ellipse(-r * 0.1, midSpineY * 0.3, r * 1.25, r * 0.46, 0, 0, Math.PI * 2);
     } else if (spec.bodyShape === 'puffer') {
-        ctx.ellipse(0, 0, r * 0.85, r * 0.78, 0, 0, Math.PI * 2);
-    } else if (spec.bodyShape === 'ribbon') {
-        ctx.ellipse(-r * 0.12, 0, r * 1.45, r * 0.38, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, midSpineY * 0.2, r * 0.85, r * 0.78, 0, 0, Math.PI * 2);
     } else {
-        ctx.moveTo(r * 1.08, 0);
-        ctx.bezierCurveTo(r * 0.65, -r * 0.68, -r * 0.45, -r * 0.62, -r * 1.02, 0);
-        ctx.bezierCurveTo(-r * 0.45, r * 0.64, r * 0.65, r * 0.68, r * 1.08, 0);
+        // Classic fusiform fish (Tetra, Guppy, Danio, Rainbow, etc.)
+        ctx.moveTo(r * 1.08, snoutY);
+        ctx.bezierCurveTo(r * 0.65, -r * 0.68 + midSpineY, -r * 0.45, -r * 0.62 + midSpineY * 1.15, -r * 1.02, peduncleY);
+        ctx.bezierCurveTo(-r * 0.45, r * 0.64 + midSpineY * 1.15, r * 0.65, r * 0.68 + midSpineY, r * 1.08, snoutY);
     }
 
     const bodyGrad = getCachedBodyGrad(spec.id, primaryCol, secondaryCol, r);
@@ -539,455 +548,643 @@ function drawSingleFishOrEgg(fish, now) {
         ctx.clip();
 
     if (patternId === 'neon_tetra') {
-        ctx.fillStyle = '#ef4444';
-        ctx.fillRect(-r * 1.1, -r * 0.05, r * 1.05, r * 0.75);
-        ctx.strokeStyle = '#7dd3fc';
-        ctx.lineWidth = Math.max(2.8, r * 0.22);
+        // Neon Tetra: Organic scarlet crimson belly curving along lower spine to tail peduncle
+        const bellyGrad = ctx.createLinearGradient(0, getSpineY(-0.5), 0, getSpineY(-0.5) + r * 0.7);
+        bellyGrad.addColorStop(0, '#ef4444');
+        bellyGrad.addColorStop(0.65, '#dc2626');
+        bellyGrad.addColorStop(1, '#991b1b');
+        ctx.fillStyle = bellyGrad;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.05, getSpineY(-0.05) + r * 0.08);
+        ctx.quadraticCurveTo(-r * 0.55, getSpineY(-0.55) + r * 0.12, -r * 1.02, peduncleY);
+        ctx.lineTo(-r * 1.02, peduncleY + r * 0.28);
+        ctx.quadraticCurveTo(-r * 0.55, getSpineY(-0.55) + r * 0.62, -r * 0.05, getSpineY(-0.05) + r * 0.45);
+        ctx.closePath();
+        ctx.fill();
+
+        // Iridescent Bioluminescent Cyan Lateral Beam (Outer Bloom + Bright Core)
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+        ctx.lineWidth = Math.max(3.8, r * 0.25);
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(r * 0.72, -r * 0.06);
-        ctx.quadraticCurveTo(0, -r * 0.16, -r * 0.78, -r * 0.04);
+        ctx.moveTo(r * 0.72, getSpineY(0.72) - r * 0.05);
+        ctx.bezierCurveTo(r * 0.15, getSpineY(0.15) - r * 0.06, -r * 0.4, getSpineY(-0.4) - r * 0.02, -r * 0.88, peduncleY - r * 0.02);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#e0f2fe';
+        ctx.lineWidth = Math.max(1.6, r * 0.11);
+        ctx.beginPath();
+        ctx.moveTo(r * 0.72, getSpineY(0.72) - r * 0.05);
+        ctx.bezierCurveTo(r * 0.15, getSpineY(0.15) - r * 0.06, -r * 0.4, getSpineY(-0.4) - r * 0.02, -r * 0.88, peduncleY - r * 0.02);
+        ctx.stroke();
+
+        // Silvery pearl anterior abdomen shield
+        ctx.fillStyle = 'rgba(241, 245, 249, 0.75)';
+        ctx.beginPath();
+        ctx.ellipse(r * 0.28, getSpineY(0.28) + r * 0.24, r * 0.24, r * 0.15, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+    } else if (patternId === 'cardinal_tetra') {
+        // Cardinal Tetra: Full-length deep scarlet crimson underbelly from throat to caudal base
+        const cardBellyGrad = ctx.createLinearGradient(0, 0, 0, r * 0.7);
+        cardBellyGrad.addColorStop(0, '#dc2626');
+        cardBellyGrad.addColorStop(0.7, '#b91c1c');
+        cardBellyGrad.addColorStop(1, '#7f1d1d');
+        ctx.fillStyle = cardBellyGrad;
+        ctx.beginPath();
+        ctx.moveTo(r * 0.65, getSpineY(0.65) + r * 0.08);
+        ctx.bezierCurveTo(r * 0.15, getSpineY(0.15) + r * 0.12, -r * 0.45, getSpineY(-0.45) + r * 0.12, -r * 1.02, peduncleY);
+        ctx.lineTo(-r * 1.02, peduncleY + r * 0.28);
+        ctx.bezierCurveTo(-r * 0.45, getSpineY(-0.45) + r * 0.65, r * 0.15, getSpineY(0.15) + r * 0.62, r * 0.65, getSpineY(0.65) + r * 0.32);
+        ctx.closePath();
+        ctx.fill();
+
+        // Electric cyan-blue lateral line
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+        ctx.lineWidth = Math.max(3.8, r * 0.24);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(r * 0.82, getSpineY(0.82) - r * 0.05);
+        ctx.bezierCurveTo(r * 0.2, getSpineY(0.2) - r * 0.06, -r * 0.45, getSpineY(-0.45) - r * 0.02, -r * 0.92, peduncleY - r * 0.02);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#bae6fd';
+        ctx.lineWidth = Math.max(1.6, r * 0.1);
+        ctx.beginPath();
+        ctx.moveTo(r * 0.82, getSpineY(0.82) - r * 0.05);
+        ctx.bezierCurveTo(r * 0.2, getSpineY(0.2) - r * 0.06, -r * 0.45, getSpineY(-0.45) - r * 0.02, -r * 0.92, peduncleY - r * 0.02);
+        ctx.stroke();
+    } else if (patternId === 'clownfish') {
+        // Clownfish (Amphiprion ocellaris): 3 Contoured Anatomical White Bars with Spine Curvature & Pitch Tilting
+        const drawClownBar = (nx, width, peakForward = 0) => {
+            const cy = getSpineY(nx);
+            const slope = getSpineSlope(nx);
+            const bx = r * nx;
+            const w = r * width;
+            ctx.beginPath();
+            ctx.moveTo(bx - w * 0.5 - slope * 0.6, cy - r * 1.1);
+            ctx.quadraticCurveTo(bx + peakForward * r * 0.2, cy, bx - w * 0.5 + slope * 0.6, cy + r * 1.1);
+            ctx.lineTo(bx + w * 0.5 + slope * 0.6, cy + r * 1.1);
+            ctx.quadraticCurveTo(bx + w * 0.5 + peakForward * r * 0.2, cy, bx + w * 0.5 - slope * 0.6, cy - r * 1.1);
+            ctx.closePath();
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = Math.max(1.5, r * 0.07);
+            ctx.stroke();
+        };
+        drawClownBar(0.52, 0.18, 0.05);   // Head bar behind eye
+        drawClownBar(-0.05, 0.24, 0.16);  // Mid bar with signature forward triangular crest
+        drawClownBar(-0.68, 0.16, 0.02);  // Tail bar near caudal peduncle
+    } else if (patternId === 'panda_cory') {
+        // Panda Corydoras: Soft pearlescent body with velvety obsidian markings hugging spine curves
+        ctx.fillStyle = '#0f172a';
+        // Eye mask slanting across cheek
+        const eyeCy = getSpineY(0.54);
+        ctx.beginPath();
+        ctx.ellipse(r * 0.54, eyeCy - r * 0.06, r * 0.18, r * 0.32, 0.35, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Dorsal saddle hugging mid-spine crest
+        const midCy = getSpineY(-0.02);
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.28, midCy - r * 0.65);
+        ctx.quadraticCurveTo(r * 0.02, midCy - r * 0.8, r * 0.18, midCy - r * 0.55);
+        ctx.quadraticCurveTo(r * 0.05, midCy - r * 0.1, -r * 0.24, midCy - r * 0.15);
+        ctx.closePath();
+        ctx.fill();
+
+        // Caudal peduncle black spot swaying with peduncleY
+        ctx.beginPath();
+        ctx.arc(-r * 0.85, peduncleY, r * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Delicate sensory barbels at snout
+        ctx.strokeStyle = '#fde68a';
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(r * 0.98, getSpineY(0.98) + r * 0.2);
+        ctx.quadraticCurveTo(r * 1.18, getSpineY(0.98) + r * 0.32, r * 1.25, getSpineY(0.98) + r * 0.28 + Math.sin(now * 0.008) * 2);
         ctx.stroke();
     } else if (patternId === 'fancy_guppy') {
+        // Fancy Guppy: Sinuous flame-like mosaic markings undulating along the spine
         const gupGrad = ctx.createLinearGradient(-r, 0, r, 0);
         gupGrad.addColorStop(0, '#ec4899');
         gupGrad.addColorStop(0.5, '#f59e0b');
-        gupGrad.addColorStop(1, '#fde047');
+        gupGrad.addColorStop(1, '#38bdf8');
         ctx.fillStyle = gupGrad;
-        ctx.fillRect(-r * 1.1, -r, r * 2.2, r * 1.55);
+        ctx.beginPath();
+        ctx.moveTo(r * 0.5, getSpineY(0.5) - r * 0.15);
+        ctx.bezierCurveTo(0, midSpineY - r * 0.25, -r * 0.6, getSpineY(-0.6) - r * 0.18, -r * 0.95, peduncleY);
+        ctx.bezierCurveTo(-r * 0.6, getSpineY(-0.6) + r * 0.22, 0, midSpineY + r * 0.25, r * 0.5, getSpineY(0.5) + r * 0.15);
+        ctx.closePath();
+        ctx.fill();
+
+        // Leopard / mosaic spots that undulate with the spine wave
         ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
-        [-0.55, -0.25, 0.05].forEach((bx, idx) => {
+        [-0.65, -0.4, -0.15, 0.1].forEach((nx, idx) => {
+            const spotY = getSpineY(nx) + (idx % 2 === 0 ? -1 : 1) * r * 0.12;
             ctx.beginPath();
-            ctx.arc(r * bx, (idx % 2 === 0 ? -1 : 1) * r * 0.12, r * 0.09, 0, Math.PI * 2);
+            ctx.ellipse(r * nx, spotY, r * 0.08, r * 0.05, 0.4 * (idx % 2 === 0 ? 1 : -1), 0, Math.PI * 2);
             ctx.fill();
         });
-    } else if (patternId === 'panda_cory') {
-        ctx.fillStyle = '#fef3c7';
-        ctx.fillRect(-r * 1.2, -r, r * 2.4, r * 2);
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(r * 0.42, -r, r * 0.34, r * 1.6);
-        ctx.fillRect(-r * 0.92, -r, r * 0.35, r * 1.6);
-    } else if (patternId === 'pleco') {
-        ctx.fillStyle = '#facc15';
-        ctx.fillRect(-r * 1.2, -r, r * 2.4, r * 2);
-        ctx.fillStyle = '#0f172a';
-        for (let px = -0.8; px <= 0.75; px += 0.32) {
+    } else if (patternId === 'angelfish') {
+        // Angelfish: Bowing, Tapering Vertical Stress Bars conforming to spine curvature
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        [0.48, 0.05, -0.4, -0.78].forEach((nx, idx) => {
+            const cy = getSpineY(nx);
+            const slope = getSpineSlope(nx);
+            const bx = r * nx;
+            const w = idx === 1 ? r * 0.15 : (idx === 0 ? r * 0.11 : r * 0.08);
             ctx.beginPath();
-            ctx.ellipse(r * px, -r * 0.1, r * 0.09, r * 0.45, 0.25, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    } else if (patternId === 'clownfish') {
-        ctx.fillStyle = '#f97316';
-        ctx.fillRect(-r * 1.2, -r, r * 2.4, r * 2);
-        ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = '#090d16';
-        ctx.lineWidth = Math.max(1.5, r * 0.08);
-        [-r * 0.58, -r * 0.02, r * 0.48].forEach(bx => {
-            ctx.beginPath();
-            ctx.moveTo(bx - r * 0.12, -r);
-            ctx.quadraticCurveTo(bx - r * 0.04, 0, bx - r * 0.12, r);
-            ctx.lineTo(bx + r * 0.12, r);
-            ctx.quadraticCurveTo(bx + r * 0.2, 0, bx + r * 0.12, -r);
+            ctx.moveTo(bx - w * 0.5 - slope * 0.8, cy - r * 1.5);
+            ctx.quadraticCurveTo(bx - slope * 0.1, cy, bx - w * 0.35 + slope * 0.8, cy + r * 1.5);
+            ctx.lineTo(bx + w * 0.35 + slope * 0.8, cy + r * 1.5);
+            ctx.quadraticCurveTo(bx + slope * 0.1, cy, bx + w * 0.5 - slope * 0.8, cy - r * 1.5);
             ctx.closePath();
             ctx.fill();
-            ctx.stroke();
         });
-    } else if (patternId === 'betta') {
-        ctx.strokeStyle = 'rgba(232, 121, 249, 0.55)';
-        ctx.lineWidth = 0.9;
-        for (let sx = -r * 0.75; sx < r * 0.55; sx += r * 0.24) {
-            ctx.beginPath();
-            ctx.arc(sx, -r * 0.05, r * 0.14, -0.9, 0.9);
-            ctx.stroke();
-        }
-    } else if (patternId === 'angelfish') {
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
-        [-r * 0.44, r * 0.04, r * 0.46].forEach(bx => {
-            ctx.beginPath();
-            ctx.moveTo(bx - r * 0.08, -r);
-            ctx.quadraticCurveTo(bx + r * 0.04, 0, bx - r * 0.08, r);
-            ctx.lineTo(bx + r * 0.09, r);
-            ctx.quadraticCurveTo(bx + r * 0.18, 0, bx + r * 0.09, -r);
-            ctx.fill();
-        });
+
+        // Trailing filamentous pelvic streamers with wave lag
+        ctx.strokeStyle = 'rgba(254, 240, 138, 0.85)';
+        ctx.lineWidth = 1.2;
+        const streamLag = Math.sin(fish.tailPhase - 1.2) * (r * 0.28);
+        ctx.beginPath();
+        ctx.moveTo(r * 0.18, getSpineY(0.18) + r * 0.65);
+        ctx.quadraticCurveTo(r * 0.05, r * 1.6 + streamLag, -r * 0.45, r * 2.3 + streamLag * 1.3);
+        ctx.moveTo(r * 0.22, getSpineY(0.22) + r * 0.62);
+        ctx.quadraticCurveTo(r * 0.1, r * 1.5 + streamLag, -r * 0.38, r * 2.1 + streamLag * 1.3);
+        ctx.stroke();
     } else if (patternId === 'discus') {
+        // Discus: Luminous turquoise vermiculation ripples flowing across circular body
         ctx.strokeStyle = '#67e8f9';
         ctx.lineWidth = Math.max(1.8, r * 0.075);
         for (let s = -3; s <= 3; s++) {
+            const nx = s * 0.24;
+            const cy = getSpineY(nx);
+            const bx = r * nx;
             ctx.beginPath();
-            ctx.moveTo(s * r * 0.22, -r);
-            ctx.bezierCurveTo(s * r * 0.22 + r * 0.12, -r * 0.3, s * r * 0.22 - r * 0.12, r * 0.3, s * r * 0.22, r);
+            ctx.moveTo(bx, cy - r * 0.95);
+            ctx.bezierCurveTo(
+                bx + r * 0.12, cy - r * 0.35,
+                bx - r * 0.12, cy + r * 0.35,
+                bx, cy + r * 0.95
+            );
             ctx.stroke();
         }
+        // Translucent stress bars that flex with the spine
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.28)';
+        ctx.lineWidth = Math.max(2.2, r * 0.09);
+        [-0.5, -0.15, 0.2].forEach(nx => {
+            const cy = getSpineY(nx);
+            ctx.beginPath();
+            ctx.moveTo(r * nx, cy - r * 0.9);
+            ctx.lineTo(r * nx, cy + r * 0.9);
+            ctx.stroke();
+        });
     } else if (patternId === 'blue_tang') {
-        ctx.fillStyle = '#2563eb';
-        ctx.fillRect(-r * 1.2, -r, r * 2.4, r * 2);
+        // Blue Tang (Paracanthurus hepatus): Signature looping painter's palette & yellow tail wedge
         ctx.strokeStyle = '#090d16';
-        ctx.lineWidth = r * 0.17;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.arc(-r * 0.12, -r * 0.04, r * 0.46, -0.45, Math.PI + 0.45);
-        ctx.stroke();
-    } else if (patternId === 'flowerhorn') {
-        const fhGrad = ctx.createLinearGradient(-r, 0, r, 0);
-        fhGrad.addColorStop(0, '#0ea5e9');
-        fhGrad.addColorStop(0.55, '#f43f5e');
-        fhGrad.addColorStop(1, '#e11d48');
-        ctx.fillStyle = fhGrad;
-        ctx.fillRect(-r * 1.3, -r, r * 2.6, r * 2);
-
-        ctx.fillStyle = '#090d16';
-        [-0.6, -0.25, 0.1].forEach(fx => {
-            ctx.beginPath();
-            ctx.arc(r * fx, -r * 0.05, r * 0.13, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        ctx.fillStyle = '#bae6fd';
-        for (let px = -0.8; px <= 0.4; px += 0.26) {
-            ctx.beginPath();
-            ctx.arc(r * px, -r * 0.24, 1.4, 0, Math.PI * 2);
-            ctx.arc(r * (px + 0.1), r * 0.18, 1.4, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    } else if (patternId === 'koi_kohaku') {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(-r * 1.3, -r, r * 2.6, r * 2);
-        ctx.fillStyle = '#dc2626';
-        ctx.beginPath();
-        ctx.arc(r * 0.65, -r * 0.18, r * 0.24, 0, Math.PI * 2);
-        ctx.arc(-r * 0.05, -r * 0.15, r * 0.42, 0, Math.PI * 2);
-        ctx.arc(-r * 0.62, r * 0.08, r * 0.32, 0, Math.PI * 2);
-        ctx.fill();
-    } else if (patternId === 'arowana') {
-        const goldSheen = ctx.createLinearGradient(-r * 1.3, -r * 0.4, r * 1.3, r * 0.4);
-        goldSheen.addColorStop(0, '#b45309');
-        goldSheen.addColorStop(0.5, '#fbbf24');
-        goldSheen.addColorStop(1, '#fef08a');
-        ctx.fillStyle = goldSheen;
-        ctx.fillRect(-r * 1.4, -r * 0.5, r * 2.8, r);
-
-        ctx.strokeStyle = 'rgba(254, 249, 195, 0.85)';
-        ctx.lineWidth = 1.25;
-        for (let sx = -r * 0.95; sx < r * 0.95; sx += r * 0.28) {
-            ctx.beginPath();
-            ctx.arc(sx, -r * 0.12, r * 0.15, -Math.PI * 0.48, Math.PI * 0.48);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(sx + r * 0.12, r * 0.1, r * 0.15, -Math.PI * 0.48, Math.PI * 0.48);
-            ctx.stroke();
-        }
-    } else if (patternId === 'cardinal_tetra') {
-        // Full belly scarlet crimson
-        ctx.fillStyle = '#dc2626';
-        ctx.fillRect(-r * 1.1, -r * 0.1, r * 2.2, r * 0.8);
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = Math.max(2.6, r * 0.2);
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(r * 0.8, -r * 0.12);
-        ctx.quadraticCurveTo(0, -r * 0.18, -r * 0.85, -r * 0.08);
-        ctx.stroke();
-    } else if (patternId === 'kuhli_loach') {
-        ctx.fillStyle = '#ea580c';
-        ctx.fillRect(-r * 1.4, -r * 0.5, r * 2.8, r);
-        ctx.fillStyle = '#451a03';
-        for (let kx = -0.9; kx <= 0.8; kx += 0.28) {
-            ctx.beginPath();
-            ctx.ellipse(r * kx, -r * 0.08, r * 0.09, r * 0.32, 0.15, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    } else if (patternId === 'mandarin_fish') {
-        ctx.fillStyle = '#ea580c';
-        ctx.fillRect(-r * 1.2, -r, r * 2.4, r * 2);
-        ctx.strokeStyle = '#22d3ee';
-        ctx.lineWidth = 2.2;
-        ctx.beginPath();
-        ctx.arc(-r * 0.2, 0, r * 0.32, 0, Math.PI * 1.5);
-        ctx.arc(r * 0.35, -r * 0.1, r * 0.25, 0.5, Math.PI * 1.8);
-        ctx.stroke();
-        ctx.strokeStyle = '#10b981';
-        ctx.beginPath();
-        ctx.arc(-r * 0.5, -r * 0.15, r * 0.2, 0, Math.PI * 2);
-        ctx.arc(0, r * 0.2, r * 0.18, 0, Math.PI * 2);
-        ctx.stroke();
-    } else if (patternId === 'dragon_seahorse') {
-        ctx.fillStyle = '#eab308';
-        ctx.fillRect(-r * 1.2, -r, r * 2.4, r * 2);
-        // Leafy camouflage appendages
-        ctx.fillStyle = '#10b981';
-        [-0.4, 0.1, 0.6].forEach(lx => {
-            ctx.beginPath();
-            ctx.ellipse(r * lx, -r * 0.45, r * 0.2, r * 0.08, 0.5, 0, Math.PI * 2);
-            ctx.ellipse(r * (lx - 0.1), r * 0.4, r * 0.18, r * 0.08, -0.5, 0, Math.PI * 2);
-            ctx.fill();
-        });
-    } else if (patternId === 'marbled_hatchetfish') {
-        // Silver Marbled Hatchetfish: Triangular silver keel belly with jagged lightning marble bars
-        ctx.fillStyle = '#f1f5f9';
-        ctx.beginPath();
-        ctx.moveTo(r * 0.9, -r * 0.1);
-        ctx.quadraticCurveTo(-r * 0.1, r * 1.1, -r * 0.8, -r * 0.1);
-        ctx.fill();
-        ctx.strokeStyle = '#334155';
-        ctx.lineWidth = 1.8;
-        for (let bx = -0.5; bx <= 0.5; bx += 0.28) {
-            ctx.beginPath();
-            ctx.moveTo(r * bx, -r * 0.05);
-            ctx.lineTo(r * (bx - 0.12), r * 0.65);
-            ctx.stroke();
-        }
-    } else if (patternId === 'peacock_gudgeon') {
-        // Peacock Gudgeon: Cobalt blue flanks with orange-red vertical tiger bars & tail eye-spot
-        ctx.fillStyle = '#0284c7';
-        ctx.fillRect(-r * 1.1, -r * 0.5, r * 2.2, r);
-        ctx.fillStyle = '#ea580c';
-        for (let gx = -0.7; gx <= 0.6; gx += 0.22) {
-            ctx.fillRect(r * gx, -r * 0.4, r * 0.08, r * 0.8);
-        }
-        // Black peacock eye-spot rimmed in gold near tail
-        ctx.fillStyle = '#fde047';
-        ctx.beginPath();
-        ctx.arc(-r * 0.85, -r * 0.1, r * 0.12, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#0f172a';
-        ctx.beginPath();
-        ctx.arc(-r * 0.85, -r * 0.1, r * 0.07, 0, Math.PI * 2);
-        ctx.fill();
-    } else if (patternId === 'glass_catfish') {
-        // Phantom Glass Catfish: Transparent body with segmented white spinal cord & pulsing internal red organ
-        ctx.fillStyle = 'rgba(241, 245, 249, 0.22)';
-        ctx.fillRect(-r * 1.4, -r * 0.6, r * 2.8, r * 1.2);
-        // Segmented white spinal cord
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.lineWidth = 2.2;
-        ctx.beginPath();
-        ctx.moveTo(r * 0.6, 0);
-        ctx.lineTo(-r * 1.1, 0);
-        ctx.stroke();
-        // Tiny vertebrae ribs
-        ctx.lineWidth = 1;
-        for (let sx = -0.9; sx <= 0.4; sx += 0.12) {
-            ctx.beginPath();
-            ctx.moveTo(r * sx, -r * 0.18);
-            ctx.lineTo(r * sx, r * 0.18);
-            ctx.stroke();
-        }
-        // Beating internal vital red heart/organ sac
-        const heartPulse = 1.0 + Math.sin(now * 0.012) * 0.25;
-        ctx.fillStyle = '#ef4444';
-        ctx.beginPath();
-        ctx.ellipse(r * 0.45, r * 0.06, r * 0.14 * heartPulse, r * 0.18 * heartPulse, 0, 0, Math.PI * 2);
-        ctx.fill();
-    } else if (patternId === 'pea_puffer') {
-        // Spotted Dwarf Pea Puffer: Yellow belly with dark emerald-black circular target spots
-        ctx.fillStyle = '#facc15';
-        ctx.fillRect(-r * 0.9, 0, r * 1.8, r * 0.8);
-        ctx.fillStyle = '#064e3b';
-        const puffSpots = [
-            { x: -0.3, y: -0.35, rad: 0.14 },
-            { x: 0.15, y: -0.4, rad: 0.12 },
-            { x: -0.5, y: -0.1, rad: 0.11 },
-            { x: 0.35, y: -0.15, rad: 0.15 },
-            { x: -0.1, y: 0.15, rad: 0.1 }
-        ];
-        puffSpots.forEach(s => {
-            ctx.beginPath();
-            ctx.arc(r * s.x, r * s.y, r * s.rad, 0, Math.PI * 2);
-            ctx.fill();
-        });
-    } else if (patternId === 'boesemani_rainbow') {
-        // Boesemani Rainbowfish: Split gradient (front cobalt blue, rear blazing tangerine)
-        const rainGrad = ctx.createLinearGradient(-r * 1.2, 0, r * 1.2, 0);
-        rainGrad.addColorStop(0, '#f97316');
-        rainGrad.addColorStop(0.48, '#fb923c');
-        rainGrad.addColorStop(0.52, '#0284c7');
-        rainGrad.addColorStop(1, '#1e40af');
-        ctx.fillStyle = rainGrad;
-        ctx.fillRect(-r * 1.2, -r * 0.8, r * 2.4, r * 1.6);
-        // Vertical iridescent sheen bars
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.lineWidth = 1.2;
-        for (let rx = -0.8; rx <= 0.8; rx += 0.22) {
-            ctx.beginPath();
-            ctx.moveTo(r * rx, -r * 0.5);
-            ctx.lineTo(r * rx, r * 0.5);
-            ctx.stroke();
-        }
-    } else if (patternId === 'amazon_leaf_fish') {
-        // Mimic Amazon Leaf Fish: Veined dead-leaf camouflage outline with stem chin barbel
-        ctx.fillStyle = '#78350f';
-        ctx.fillRect(-r * 1.2, -r * 0.7, r * 2.4, r * 1.4);
-        // Center leaf vein
-        ctx.strokeStyle = '#451a03';
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        ctx.moveTo(r * 0.9, 0);
-        ctx.lineTo(-r * 0.9, 0);
-        ctx.stroke();
-        // Leaf vein branches
-        for (let lx = -0.6; lx <= 0.6; lx += 0.3) {
-            ctx.beginPath();
-            ctx.moveTo(r * lx, 0);
-            ctx.lineTo(r * (lx + 0.15), -r * 0.45);
-            ctx.moveTo(r * lx, 0);
-            ctx.lineTo(r * (lx + 0.15), r * 0.45);
-            ctx.stroke();
-        }
-    } else if (patternId === 'elephantnose_fish') {
-        // Peter's Elephantnose Fish: Dark body with down-curved sensory chin trunk & electric stripes
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(-r * 1.3, -r * 0.6, r * 2.6, r * 1.2);
-        // Downcurved chin proboscis
-        ctx.strokeStyle = '#334155';
         ctx.lineWidth = r * 0.18;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(r * 0.95, r * 0.15);
-        ctx.quadraticCurveTo(r * 1.25, r * 0.4, r * 1.15, r * 0.75);
+        ctx.moveTo(r * 0.55, getSpineY(0.55) - r * 0.15);
+        ctx.bezierCurveTo(r * 0.1, midSpineY - r * 0.55, -r * 0.65, getSpineY(-0.65) - r * 0.45, -r * 0.85, peduncleY);
+        ctx.bezierCurveTo(-r * 0.65, getSpineY(-0.65) + r * 0.25, -r * 0.1, midSpineY + r * 0.25, r * 0.05, getSpineY(0.05));
+        ctx.bezierCurveTo(r * 0.15, getSpineY(0.15) - r * 0.2, r * 0.35, getSpineY(0.35) - r * 0.15, r * 0.55, getSpineY(0.55) - r * 0.15);
         ctx.stroke();
-        // White electric organ stripes on tail
-        ctx.strokeStyle = '#f8fafc';
-        ctx.lineWidth = 2.2;
+
+        // Brilliant canary yellow caudal wedge pointing forward
+        ctx.fillStyle = '#facc15';
         ctx.beginPath();
-        ctx.moveTo(-r * 0.75, -r * 0.3);
-        ctx.lineTo(-r * 0.75, r * 0.3);
-        ctx.moveTo(-r * 0.92, -r * 0.25);
-        ctx.lineTo(-r * 0.92, r * 0.25);
-        ctx.stroke();
-    } else if (patternId === 'african_butterfly') {
-        // Pantodon African Butterflyfish: Broad surface lace wings & marble camouflage
-        ctx.fillStyle = '#713f12';
-        ctx.fillRect(-r * 1.2, -r * 0.6, r * 2.4, r * 1.2);
-        // Large fan lace wings spread on sides
-        ctx.fillStyle = 'rgba(254, 243, 199, 0.45)';
-        ctx.strokeStyle = '#a16207';
-        ctx.lineWidth = 1.4;
-        ctx.beginPath();
-        ctx.moveTo(0, -r * 0.2);
-        ctx.quadraticCurveTo(r * 0.6, -r * 1.1, -r * 0.6, -r * 1.2);
+        ctx.moveTo(-r * 0.35, peduncleY);
+        ctx.lineTo(-r * 1.15, peduncleY - r * 0.45);
+        ctx.lineTo(-r * 1.15, peduncleY + r * 0.45);
         ctx.closePath();
         ctx.fill();
-        ctx.stroke();
-    } else if (patternId === 'hillstream_loach') {
-        // Borneo Hillstream Loach: Honeycomb labyrinth spots on aerodynamic saucer wings
-        ctx.fillStyle = '#1c1917';
-        ctx.fillRect(-r * 1.2, -r * 0.8, r * 2.4, r * 1.6);
-        ctx.fillStyle = '#fef08a';
-        for (let hx = -0.7; hx <= 0.7; hx += 0.25) {
-            for (let hy = -0.4; hy <= 0.4; hy += 0.26) {
+    } else if (patternId === 'arowana') {
+        // Asian Dragon Arowana: Overlapping golden dragon scales aligned along the undulating spine
+        ctx.strokeStyle = 'rgba(254, 240, 138, 0.9)';
+        ctx.lineWidth = 1.3;
+        for (let sx = -0.95; sx < 0.95; sx += 0.24) {
+            const cy = getSpineY(sx);
+            const bx = r * sx;
+            [-0.14, 0.12].forEach(yoff => {
                 ctx.beginPath();
-                ctx.arc(r * hx, r * hy, r * 0.08, 0, Math.PI * 2);
-                ctx.fill();
-            }
+                ctx.arc(bx, cy + r * yoff, r * 0.15, -Math.PI * 0.45, Math.PI * 0.45);
+                ctx.stroke();
+            });
+        }
+        // Dragon chin barbels pointing forward
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(r * 1.3, snoutY + r * 0.08);
+        ctx.quadraticCurveTo(r * 1.55, snoutY + r * 0.12, r * 1.65, snoutY + r * 0.06);
+        ctx.stroke();
+    } else if (patternId === 'koi_kohaku') {
+        // Japanese Koi Kohaku: Pure porcelain white base with organic crimson "Hi" brush patches
+        ctx.fillStyle = '#dc2626';
+        // Head patch (flexes with snoutY)
+        ctx.beginPath();
+        ctx.ellipse(r * 0.65, getSpineY(0.65) - r * 0.08, r * 0.28, r * 0.18, -0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Mid-body stepped saddle (flexes with midSpineY)
+        ctx.beginPath();
+        ctx.ellipse(-r * 0.05, midSpineY - r * 0.12, r * 0.42, r * 0.28, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Caudal peduncle step (flexes with peduncleY)
+        ctx.beginPath();
+        ctx.ellipse(-r * 0.65, peduncleY + r * 0.06, r * 0.28, r * 0.16, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+    } else if (patternId === 'flowerhorn') {
+        // Flowerhorn: High nuchal kok + calligraphic "dragon flower" lateral spots
+        ctx.fillStyle = '#090d16';
+        [-0.6, -0.25, 0.1].forEach(nx => {
+            const cy = getSpineY(nx);
+            ctx.beginPath();
+            ctx.arc(r * nx, cy - r * 0.04, r * 0.13, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        // Metallic pearl spangles ("worm tracks")
+        ctx.fillStyle = '#bae6fd';
+        for (let px = -0.8; px <= 0.4; px += 0.24) {
+            const cy = getSpineY(px);
+            ctx.beginPath();
+            ctx.arc(r * px, cy - r * 0.22, 1.5, 0, Math.PI * 2);
+            ctx.arc(r * (px + 0.08), cy + r * 0.18, 1.5, 0, Math.PI * 2);
+            ctx.fill();
         }
     } else if (patternId === 'black_ghost_knife') {
-        // Velvet Black Ghost Knifefish: Jet black body, undulating belly ribbon fin & ivory tail rings
-        ctx.fillStyle = '#09090b';
-        ctx.fillRect(-r * 1.4, -r * 0.6, r * 2.8, r * 1.2);
-        // Ivory white tail rings
+        // Velvet Black Ghost Knifefish: Jet obsidian body + travelling ventral ribbon wave + ivory tail rings
         ctx.fillStyle = '#f8fafc';
-        ctx.fillRect(-r * 1.05, -r * 0.2, r * 0.08, r * 0.4);
-        ctx.fillRect(-r * 0.85, -r * 0.2, r * 0.08, r * 0.4);
-        // Undulating bottom ribbon fin
-        const knifeWave = Math.sin(now * 0.008);
-        ctx.strokeStyle = 'rgba(39, 39, 42, 0.9)';
-        ctx.lineWidth = 3.5;
         ctx.beginPath();
-        ctx.moveTo(r * 0.5, r * 0.35);
-        ctx.quadraticCurveTo(0, r * 0.6 + knifeWave * 3, -r * 1.0, r * 0.35);
+        ctx.ellipse(-r * 1.05, peduncleY, r * 0.05, r * 0.22, 0, 0, Math.PI * 2);
+        ctx.ellipse(-r * 0.85, peduncleY, r * 0.05, r * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ivory dorsal blaze from snout over brow
+        ctx.strokeStyle = '#f8fafc';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(r * 1.25, snoutY);
+        ctx.quadraticCurveTo(r * 0.7, getSpineY(0.7) - r * 0.15, r * 0.2, midSpineY - r * 0.22);
+        ctx.stroke();
+
+        // Continuous travelling ventral ribbon wave
+        ctx.strokeStyle = 'rgba(63, 63, 70, 0.95)';
+        ctx.lineWidth = Math.max(3.0, r * 0.15);
+        ctx.beginPath();
+        for (let vx = -0.9; vx <= 0.6; vx += 0.05) {
+            const cy = getSpineY(vx);
+            const ribbonWave = Math.sin(now * 0.009 + vx * 14) * (r * 0.12);
+            const px = r * vx;
+            const py = cy + r * 0.32 + ribbonWave;
+            if (vx === -0.9) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
         ctx.stroke();
     } else if (patternId === 'senegal_bichir') {
-        // Armored Dinosaur Bichir: Ganoid scales crosshatch & serrated dorsal finlet row
-        ctx.fillStyle = '#475569';
-        ctx.fillRect(-r * 1.5, -r * 0.5, r * 3.0, r);
-        // Sawtooth dorsal finlets
-        ctx.fillStyle = '#64748b';
-        for (let fx = -0.8; fx <= 0.6; fx += 0.18) {
+        // Senegal Dinosaur Bichir: Ganoid diamond scale crosshatch & serrated dorsal finlet row
+        ctx.strokeStyle = 'rgba(100, 116, 139, 0.75)';
+        ctx.lineWidth = 1.0;
+        for (let bx = -1.1; bx <= 0.8; bx += 0.22) {
+            const cy = getSpineY(bx);
             ctx.beginPath();
-            ctx.moveTo(r * fx, -r * 0.28);
-            ctx.lineTo(r * (fx - 0.06), -r * 0.6);
-            ctx.lineTo(r * (fx + 0.06), -r * 0.28);
+            ctx.moveTo(r * bx, cy - r * 0.22);
+            ctx.lineTo(r * (bx + 0.12), cy + r * 0.22);
+            ctx.moveTo(r * (bx + 0.12), cy - r * 0.22);
+            ctx.lineTo(r * bx, cy + r * 0.22);
+            ctx.stroke();
+        }
+        // Rippling dinosaur dorsal finlets
+        ctx.fillStyle = '#64748b';
+        for (let fx = -0.85; fx <= 0.55; fx += 0.16) {
+            const cy = getSpineY(fx);
+            const finWave = Math.sin(fish.tailPhase - fx * 3) * (r * 0.06);
+            ctx.beginPath();
+            ctx.moveTo(r * fx, cy - r * 0.18);
+            ctx.lineTo(r * (fx - 0.05), cy - r * 0.45 + finWave);
+            ctx.lineTo(r * (fx + 0.05), cy - r * 0.18);
             ctx.closePath();
             ctx.fill();
         }
     } else if (patternId === 'pink_axolotl') {
-        // Smiling Sakura Axolotl: Sakura blushing body, smiling mouth, & 6 feathery crimson external gills
-        ctx.fillStyle = '#fecdd3';
-        ctx.fillRect(-r * 1.3, -r * 0.6, r * 2.6, r * 1.2);
-        // Cheerful curved smiling mouth
+        // Smiling Sakura Axolotl: Sakura blushing body + cheerful smiling mouth + 6 feathery external gills
         ctx.strokeStyle = '#e11d48';
         ctx.lineWidth = 1.8;
         ctx.beginPath();
-        ctx.arc(r * 0.72, r * 0.08, r * 0.18, 0.2, Math.PI * 0.85);
+        ctx.arc(r * 0.72, getSpineY(0.72) + r * 0.06, r * 0.18, 0.2, Math.PI * 0.85);
         ctx.stroke();
-        // 6 Branching external feathered crimson gills on head sides
+
+        // 6 Branching feathered gills swaying in the current
         const gillSway = Math.sin(now * 0.005) * 4;
         ctx.fillStyle = '#f43f5e';
         [-1, 1].forEach(side => {
             for (let g = 0; g < 3; g++) {
                 const gx = r * 0.2 - g * r * 0.12;
-                const gy = side * (r * 0.42);
+                const gy = side * (r * 0.42) + getSpineY(0.2) * 0.5;
                 ctx.beginPath();
                 ctx.ellipse(gx, gy + side * (g * 3 + gillSway * 0.4), r * 0.24, r * 0.08, side * (0.4 + g * 0.2), 0, Math.PI * 2);
                 ctx.fill();
             }
         });
+    } else if (patternId === 'glass_catfish') {
+        // Phantom Glass Catfish: Segmented flexing spinal cord, chevron ribs, & beating organ sac
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.lineWidth = Math.max(2.0, r * 0.08);
+        ctx.beginPath();
+        ctx.moveTo(r * 0.65, getSpineY(0.65));
+        for (let sx = 0.6; sx >= -1.05; sx -= 0.1) {
+            ctx.lineTo(r * sx, getSpineY(sx));
+        }
+        ctx.stroke();
+
+        // Chevron rib needles
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+        ctx.lineWidth = 0.9;
+        for (let sx = -0.9; sx <= 0.45; sx += 0.11) {
+            const cy = getSpineY(sx);
+            ctx.beginPath();
+            ctx.moveTo(r * sx, cy);
+            ctx.lineTo(r * (sx - 0.06), cy - r * 0.18);
+            ctx.moveTo(r * sx, cy);
+            ctx.lineTo(r * (sx - 0.06), cy + r * 0.18);
+            ctx.stroke();
+        }
+
+        // Beating translucent crimson heart sac
+        const heartPulse = 1.0 + Math.sin(now * 0.012) * 0.25;
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.ellipse(r * 0.45, getSpineY(0.45) + r * 0.06, r * 0.13 * heartPulse, r * 0.16 * heartPulse, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Sensory whiskered barbels
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        ctx.moveTo(r * 0.95, getSpineY(0.95) + r * 0.04);
+        ctx.quadraticCurveTo(r * 1.35, getSpineY(0.95) - r * 0.15, r * 1.6, getSpineY(0.95) - r * 0.1 + Math.sin(now * 0.007) * 3);
+        ctx.stroke();
+    } else if (patternId === 'peacock_gudgeon') {
+        // Peacock Gudgeon: Cobalt flanks with tiger bars & gold-rimmed peacock tail eye-spot
+        ctx.fillStyle = '#ea580c';
+        for (let gx = -0.7; gx <= 0.6; gx += 0.22) {
+            const cy = getSpineY(gx);
+            ctx.beginPath();
+            ctx.ellipse(r * gx, cy, r * 0.04, r * 0.35, 0.1, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // Black peacock eye-spot rimmed in gold
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath();
+        ctx.arc(-r * 0.85, peduncleY - r * 0.08, r * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(-r * 0.85, peduncleY - r * 0.08, r * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+    } else if (patternId === 'marbled_hatchetfish') {
+        // Silver Marbled Hatchetfish: Triangular silver keel belly with jagged lightning marble bars
+        ctx.fillStyle = '#f1f5f9';
+        ctx.beginPath();
+        ctx.moveTo(r * 0.9, getSpineY(0.9) - r * 0.1);
+        ctx.quadraticCurveTo(-r * 0.1, midSpineY + r * 1.15, -r * 0.8, peduncleY - r * 0.1);
+        ctx.fill();
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1.8;
+        for (let bx = -0.5; bx <= 0.5; bx += 0.26) {
+            const cy = getSpineY(bx);
+            ctx.beginPath();
+            ctx.moveTo(r * bx, cy - r * 0.05);
+            ctx.lineTo(r * (bx - 0.12), cy + r * 0.65);
+            ctx.stroke();
+        }
+    } else if (patternId === 'kuhli_loach') {
+        // Kuhli Loach: Serpentine espresso saddle bands wrapping smoothly along the eel body
+        ctx.fillStyle = '#451a03';
+        for (let kx = -0.92; kx <= 0.82; kx += 0.26) {
+            const cy = getSpineY(kx);
+            ctx.beginPath();
+            ctx.ellipse(r * kx, cy - r * 0.05, r * 0.08, r * 0.26, 0.15, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    } else if (patternId === 'pleco') {
+        // Pleco / Bristlenose: Armored scutes and leopard spots conforming to spine
+        ctx.fillStyle = '#0f172a';
+        for (let px = -0.8; px <= 0.75; px += 0.28) {
+            const cy = getSpineY(px);
+            ctx.beginPath();
+            ctx.ellipse(r * px, cy - r * 0.1, r * 0.08, r * 0.38, 0.25, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    } else if (patternId === 'mandarin_fish') {
+        // Synchiropus Mandarin Fish: Psychedelic labyrinth ribbons conforming to body contours
+        ctx.strokeStyle = '#22d3ee';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(-r * 0.2, getSpineY(-0.2), r * 0.32, 0, Math.PI * 1.5);
+        ctx.arc(r * 0.35, getSpineY(0.35) - r * 0.1, r * 0.25, 0.5, Math.PI * 1.8);
+        ctx.stroke();
+        ctx.strokeStyle = '#10b981';
+        ctx.beginPath();
+        ctx.arc(-r * 0.5, getSpineY(-0.5) - r * 0.15, r * 0.2, 0, Math.PI * 2);
+        ctx.arc(0, midSpineY + r * 0.2, r * 0.18, 0, Math.PI * 2);
+        ctx.stroke();
+    } else if (patternId === 'dragon_seahorse') {
+        // Leafy Seadragon: Translucent leafy camouflage appendages swaying with current
+        ctx.fillStyle = '#10b981';
+        [-0.4, 0.1, 0.6].forEach(lx => {
+            const cy = getSpineY(lx);
+            ctx.beginPath();
+            ctx.ellipse(r * lx, cy - r * 0.42, r * 0.2, r * 0.08, 0.5, 0, Math.PI * 2);
+            ctx.ellipse(r * (lx - 0.1), cy + r * 0.38, r * 0.18, r * 0.08, -0.5, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    } else if (patternId === 'pea_puffer') {
+        // Spotted Dwarf Pea Puffer: Irregular dark peacock-emerald circular target spots
+        ctx.fillStyle = '#064e3b';
+        const puffSpots = [
+            { x: -0.3, y: -0.32, rad: 0.14 },
+            { x: 0.15, y: -0.36, rad: 0.12 },
+            { x: -0.48, y: -0.08, rad: 0.11 },
+            { x: 0.32, y: -0.12, rad: 0.15 },
+            { x: -0.1, y: 0.16, rad: 0.1 }
+        ];
+        puffSpots.forEach(s => {
+            const cy = getSpineY(s.x);
+            ctx.beginPath();
+            ctx.arc(r * s.x, cy + r * s.y, r * s.rad, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    } else if (patternId === 'boesemani_rainbow') {
+        // Boesemani Rainbowfish: Vertical iridescent sheen striations bending with spine curvature
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
+        ctx.lineWidth = 1.3;
+        for (let rx = -0.8; rx <= 0.8; rx += 0.2) {
+            const cy = getSpineY(rx);
+            ctx.beginPath();
+            ctx.moveTo(r * rx, cy - r * 0.45);
+            ctx.lineTo(r * rx, cy + r * 0.45);
+            ctx.stroke();
+        }
+    } else if (patternId === 'amazon_leaf_fish') {
+        // Amazon Leaf Fish: Sinuous leaf vein following spine wave with branching lateral veins
+        ctx.strokeStyle = '#451a03';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(r * 0.9, getSpineY(0.9));
+        for (let lx = 0.8; lx >= -0.9; lx -= 0.1) {
+            ctx.lineTo(r * lx, getSpineY(lx));
+        }
+        ctx.stroke();
+        for (let lx = -0.6; lx <= 0.6; lx += 0.3) {
+            const cy = getSpineY(lx);
+            ctx.beginPath();
+            ctx.moveTo(r * lx, cy);
+            ctx.lineTo(r * (lx + 0.15), cy - r * 0.42);
+            ctx.moveTo(r * lx, cy);
+            ctx.lineTo(r * (lx + 0.15), cy + r * 0.42);
+            ctx.stroke();
+        }
+    } else if (patternId === 'elephantnose_fish') {
+        // Peter's Elephantnose Fish: Sensory chin proboscis + white electric organ bands
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = r * 0.18;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(r * 0.95, snoutY + r * 0.15);
+        ctx.quadraticCurveTo(r * 1.25, snoutY + r * 0.4, r * 1.15, snoutY + r * 0.75);
+        ctx.stroke();
+        ctx.strokeStyle = '#f8fafc';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.75, peduncleY - r * 0.3);
+        ctx.lineTo(-r * 0.75, peduncleY + r * 0.3);
+        ctx.moveTo(-r * 0.92, peduncleY - r * 0.25);
+        ctx.lineTo(-r * 0.92, peduncleY + r * 0.25);
+        ctx.stroke();
+    } else if (patternId === 'african_butterfly') {
+        // Pantodon African Butterflyfish: Lace wing pectoral fins
+        ctx.fillStyle = 'rgba(254, 243, 199, 0.48)';
+        ctx.strokeStyle = '#a16207';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(0, midSpineY - r * 0.2);
+        ctx.quadraticCurveTo(r * 0.6, midSpineY - r * 1.15, -r * 0.6, midSpineY - r * 1.25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    } else if (patternId === 'hillstream_loach') {
+        // Borneo Hillstream Loach: Honeycomb spots on aerodynamic wings
+        ctx.fillStyle = '#fef08a';
+        for (let hx = -0.7; hx <= 0.7; hx += 0.25) {
+            const cy = getSpineY(hx);
+            for (let hy = -0.38; hy <= 0.38; hy += 0.26) {
+                ctx.beginPath();
+                ctx.arc(r * hx, cy + r * hy, r * 0.08, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    } else if (patternId === 'betta') {
+        ctx.strokeStyle = 'rgba(232, 121, 249, 0.55)';
+        ctx.lineWidth = 0.9;
+        for (let sx = -r * 0.75; sx < r * 0.55; sx += r * 0.24) {
+            const cy = getSpineY(sx / r);
+            ctx.beginPath();
+            ctx.arc(sx, cy - r * 0.05, r * 0.14, -0.9, 0.9);
+            ctx.stroke();
+        }
     }
 
     // Custom Hybrid Chimera Color Tint Overlay when crossbred from 2 different species
     if (fish.hybridTraits && fish.hybridTraits.isHybrid) {
         ctx.save();
-        ctx.globalAlpha = 0.42;
+        ctx.globalAlpha = 0.38;
         const hybGrad = ctx.createLinearGradient(-r, -r * 0.6, r, r * 0.6);
         hybGrad.addColorStop(0, fish.hybridTraits.primaryColor);
         hybGrad.addColorStop(1, fish.hybridTraits.secondaryColor);
         ctx.fillStyle = hybGrad;
-        ctx.fillRect(-r * 1.4, -r, r * 2.8, r * 2);
+        ctx.beginPath();
+        ctx.rect(-r * 1.4, -r * 1.2, r * 2.8, r * 2.4);
+        ctx.fill();
         ctx.restore();
     }
 
-        // Top 3D Specular Gloss Highlight (Cached)
+        // Top 3D Specular Dorsal Gloss Highlight that organically bends with the spine
         ctx.fillStyle = getCachedGlossGrad(r);
-        ctx.fillRect(-r * 1.4, -r, r * 2.8, r * 0.7);
+        ctx.beginPath();
+        ctx.moveTo(r * 0.85, snoutY - r * 0.15);
+        ctx.quadraticCurveTo(0, midSpineY - r * 0.62, -r * 0.85, peduncleY - r * 0.22);
+        ctx.lineTo(-r * 0.85, peduncleY);
+        ctx.quadraticCurveTo(0, midSpineY - r * 0.08, r * 0.85, snoutY);
+        ctx.closePath();
+        ctx.fill();
         ctx.restore();
     }
 
     // 5. BREATHING GILL OPERCULUM & FLUTTERING PECTORAL FIN
     const gillBreath = Math.sin(now * 0.006 + fish.finPhase) * 1.2;
-    ctx.strokeStyle = 'rgba(15, 23, 42, 0.38)';
-    ctx.lineWidth = 1.3;
+    const gillCy = getSpineY(0.42);
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.45)';
+    ctx.lineWidth = Math.max(1.2, r * 0.06);
     ctx.beginPath();
-    ctx.arc(r * 0.42 + gillBreath * 0.3, -r * 0.02, r * 0.28, 2.3, 4.0);
+    ctx.arc(r * 0.42 + gillBreath * 0.3, gillCy - r * 0.02, r * 0.28, 2.3, 4.0);
     ctx.stroke();
 
     const pecFlap = Math.sin(fish.finPhase * 1.6) * 0.32;
     ctx.save();
-    ctx.translate(r * 0.18, r * 0.16);
+    ctx.translate(r * 0.18, getSpineY(0.18) + r * 0.16);
     ctx.rotate(pecFlap);
-    ctx.fillStyle = spec.finColor;
+    const pecGrad = ctx.createLinearGradient(0, 0, -r * 0.3, r * 0.15);
+    pecGrad.addColorStop(0, spec.finColor || '#38bdf8');
+    pecGrad.addColorStop(0.7, 'rgba(255, 255, 255, 0.42)');
+    pecGrad.addColorStop(1, 'rgba(255, 255, 255, 0.08)');
+    ctx.fillStyle = pecGrad;
     ctx.beginPath();
     ctx.ellipse(-r * 0.16, r * 0.08, r * 0.26, r * 0.13, 0.35, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.lineWidth = 0.75;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-r * 0.28, r * 0.08);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-r * 0.24, r * 0.16);
+    ctx.stroke();
     ctx.restore();
 
     // 6. EXPRESSIVE MULTI-LAYERED JEWEL EYE
     const eyeX = spec.bodyShape === 'arowana' ? r * 0.98 : r * 0.64;
-    const eyeY = -r * 0.12;
+    const eyeY = getSpineY(spec.bodyShape === 'arowana' ? 0.98 : 0.64) - r * 0.12;
     const eyeR = Math.max(2.2, r * 0.15);
 
-    ctx.fillStyle = spec.id === 'angelfish' ? '#ef4444' : '#fef08a';
+    // Sclera / Iris Ring
+    ctx.fillStyle = spec.id === 'angelfish' ? '#ef4444' : (fish.morph === 'cosmic' ? '#38bdf8' : '#fef08a');
     ctx.beginPath();
     ctx.arc(eyeX, eyeY, eyeR, 0, Math.PI * 2);
     ctx.fill();
 
+    // Fine dark limbal ring
+    ctx.strokeStyle = '#020617';
+    ctx.lineWidth = 0.75;
+    ctx.stroke();
+
+    // Deep Obsidian Pupil with lens depth
     ctx.fillStyle = '#020617';
     ctx.beginPath();
-    ctx.arc(eyeX + eyeR * 0.15, eyeY, eyeR * 0.58, 0, Math.PI * 2);
+    ctx.arc(eyeX + eyeR * 0.12, eyeY, eyeR * 0.62, 0, Math.PI * 2);
     ctx.fill();
 
+    // Dual Corneal Glints (Primary crisp glint + secondary ambient reflection)
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(eyeX + eyeR * 0.3, eyeY - eyeR * 0.28, eyeR * 0.25, 0, Math.PI * 2);
+    ctx.arc(eyeX + eyeR * 0.28, eyeY - eyeR * 0.26, eyeR * 0.26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(eyeX - eyeR * 0.15, eyeY + eyeR * 0.22, eyeR * 0.12, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();

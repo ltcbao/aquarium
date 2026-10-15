@@ -45,13 +45,14 @@ function handleCanvasPointerDown(clientX, clientY) {
     }
 
     if (currentMode === 'decorate') {
-        // Find nearest decoration on substrate
+        // Find nearest decoration anywhere in tank (including background/midground depths)
         let bestDecor = null;
-        let bestDist = 75;
+        let bestDist = 110;
         state.decorations.forEach(d => {
             const dx = d.xRatio * cw;
-            const dy = getSubstrateHeightAt(dx) - 40;
-            const dist = Math.hypot(x - dx, y - dy);
+            const floorY = getSubstrateHeightAt(dx) + 6;
+            const dy = d.yRatio !== undefined ? (d.yRatio * ch) : floorY;
+            const dist = Math.hypot(x - dx, y - (dy - 50));
             if (dist < bestDist) {
                 bestDist = dist;
                 bestDecor = d;
@@ -60,6 +61,8 @@ function handleCanvasPointerDown(clientX, clientY) {
         if (bestDecor) {
             draggingDecor = bestDecor;
             dragOffsetX = x - bestDecor.xRatio * cw;
+            const curDecorY = bestDecor.yRatio !== undefined ? (bestDecor.yRatio * ch) : (getSubstrateHeightAt(bestDecor.xRatio * cw) + 6);
+            dragOffsetY = y - curDecorY;
         }
         return;
     }
@@ -158,34 +161,89 @@ function findFishAt(x, y) {
     return null;
 }
 
-// Pointer event bindings
-canvas.addEventListener('pointerdown', (e) => {
+// Unified Container & Pointer / Touch Event Bindings
+const containerEl = document.getElementById('canvas-container') || canvas;
+
+function updatePointerCoords(clientX, clientY) {
+    const rect = containerEl.getBoundingClientRect();
+    mousePos.x = clientX - rect.left;
+    mousePos.y = clientY - rect.top;
+    mousePos.active = true;
+
+    if (draggingDecor && currentMode === 'decorate') {
+        const x = mousePos.x - dragOffsetX;
+        const y = mousePos.y - (dragOffsetY || 0);
+        draggingDecor.xRatio = Math.max(0.04, Math.min(0.96, x / cw));
+
+        const floorY = getSubstrateHeightAt(x) + 6;
+        // Allow dragging anywhere from upper water (y >= 135) down to substrate floor
+        const clampedY = Math.max(135, Math.min(floorY, y));
+        draggingDecor.yRatio = clampedY / ch;
+
+        // Auto-infer depth layer based on height:
+        const distFromFloor = floorY - clampedY;
+        if (distFromFloor < 35) {
+            draggingDecor.zDepth = 0.15; // Foreground on substrate
+        } else {
+            const depthRatio = Math.min(1.0, distFromFloor / Math.max(50, floorY - 135));
+            draggingDecor.zDepth = -0.15 - depthRatio * 0.55; // Ranges from -0.15 down to -0.70
+        }
+    }
+}
+
+// 1. Mouse & Stylus Pointer Events
+containerEl.addEventListener('pointerdown', (e) => {
+    updatePointerCoords(e.clientX, e.clientY);
     handleCanvasPointerDown(e.clientX, e.clientY);
 });
 
-canvas.addEventListener('dblclick', (e) => {
-    const rect = canvas.getBoundingClientRect();
+containerEl.addEventListener('dblclick', (e) => {
+    const rect = containerEl.getBoundingClientRect();
     triggerGlassTap(e.clientX - rect.left, e.clientY - rect.top);
 });
 
-canvas.addEventListener('pointermove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    mousePos.x = e.clientX - rect.left;
-    mousePos.y = e.clientY - rect.top;
-    mousePos.active = true;
-    if (draggingDecor && currentMode === 'decorate') {
-        const x = mousePos.x - dragOffsetX;
-        draggingDecor.xRatio = Math.max(0.06, Math.min(0.94, x / cw));
-    }
+containerEl.addEventListener('pointermove', (e) => {
+    updatePointerCoords(e.clientX, e.clientY);
 });
 
-canvas.addEventListener('pointerleave', () => {
+containerEl.addEventListener('pointerleave', () => {
     mousePos.active = false;
 });
 
 window.addEventListener('pointerup', () => {
     if (draggingDecor) {
         draggingDecor = null;
+        if (typeof syncDecorations3D === 'function') {
+            syncDecorations3D();
+        }
+        saveGame(true);
+    }
+});
+
+// 2. Mobile Touch Event Bindings (Prevents Mobile Pull-to-Refresh & Pinch Glitches)
+containerEl.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches.length > 0) {
+        e.preventDefault(); // Stop mobile browser swipe-down refresh
+        const t = e.touches[0];
+        updatePointerCoords(t.clientX, t.clientY);
+        handleCanvasPointerDown(t.clientX, t.clientY);
+    }
+}, { passive: false });
+
+containerEl.addEventListener('touchmove', (e) => {
+    if (e.touches && e.touches.length > 0) {
+        e.preventDefault();
+        const t = e.touches[0];
+        updatePointerCoords(t.clientX, t.clientY);
+    }
+}, { passive: false });
+
+containerEl.addEventListener('touchend', (e) => {
+    if (draggingDecor) {
+        draggingDecor = null;
+        if (typeof syncDecorations3D === 'function') {
+            syncDecorations3D();
+        }
         saveGame(true);
     }
 });

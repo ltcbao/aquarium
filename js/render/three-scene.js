@@ -97,7 +97,8 @@ export function initThreeScene() {
         alpha: true,
         powerPreference: 'high-performance'
     });
-    threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2));
     threeRenderer.setSize(window.innerWidth, window.innerHeight);
     threeRenderer.shadowMap.enabled = true;
     threeRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -185,7 +186,8 @@ function onThreeResize() {
     threeCamera.aspect = window.innerWidth / window.innerHeight;
     threeCamera.updateProjectionMatrix();
     threeRenderer.setSize(window.innerWidth, window.innerHeight);
-    threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2));
 }
 
 // =========================================================================
@@ -491,50 +493,60 @@ export function updateThreeEnvironment() {
 // 3. ANATOMICAL PROCEDURAL 3D FISH MESH ENGINE
 // =========================================================================
 
-// Creates a streamlined anatomical fish body with species-accurate cross-sections
+// Hydrodynamic cross-section profile: provides precise x, rY, rZ, and yOffset for any point along the fish body
+function getFishCrossSection(t, len, h, w, shape = 'fusiform') {
+    const clampedT = Math.max(0, Math.min(1, t));
+    // Streamlined body profile: smooth transition to muscular caudal peduncle at t=0 and rounded snout at t=1
+    let rY = Math.sin(clampedT * Math.PI * 0.82 + 0.18 * Math.PI) * h * 0.96;
+    let rZ = Math.sin(clampedT * Math.PI * 0.82 + 0.18 * Math.PI) * w * 0.94;
+
+    if (shape === 'cory') {
+        if (clampedT > 0.52) rY *= (1.0 + (clampedT - 0.52) * 0.42);
+        rZ *= 1.15;
+    } else if (shape === 'ribbon') {
+        rZ *= (0.35 + clampedT * 0.65);
+    }
+
+    if (clampedT > 0.68) {
+        // Taper towards mouth / snout
+        const snoutT = (clampedT - 0.68) / 0.32;
+        rY = rY * (1.0 - snoutT * 0.52) + (h * 0.08) * snoutT;
+        rZ = rZ * (1.0 - snoutT * 0.64) + (w * 0.06) * snoutT;
+    } else if (clampedT < 0.42) {
+        // Taper towards caudal peduncle (preserves anatomical muscular peduncle for seamless tail transition)
+        const tailT = (0.42 - clampedT) / 0.42;
+        rY = rY * (1.0 - tailT * 0.58) + (h * 0.22) * tailT;
+        rZ = rZ * (1.0 - tailT * 0.70) + (w * 0.14) * tailT;
+    }
+
+    const yOffset = (shape === 'cory') ? -h * 0.12 : (1.0 - clampedT) * (h * 0.06);
+
+    return {
+        x: -len * 0.5 + clampedT * len,
+        rY: Math.max(h * 0.06, rY),
+        rZ: Math.max(w * 0.05, rZ),
+        yOffset: yOffset
+    };
+}
+
+// Creates an organically sculpted anatomical fish body with species-accurate cross-sections
 function createSculptedFishBody(len, h, w, shape = 'fusiform') {
     const geo = new THREE.BufferGeometry();
     const positions = [];
     const uvs = [];
     const indices = [];
-    const rings = 14;
-    const segs = 12;
+    const rings = 16;
+    const segs = 14;
 
     for (let i = 0; i <= rings; i++) {
         const t = i / rings; // 0 (tail peduncle) to 1 (snout tip)
-        const x = -len * 0.5 + t * len;
-
-        // Realistic Hydrodynamic Cross-Section Profile
-        let rY = Math.sin(t * Math.PI) * h;
-        let rZ = Math.sin(t * Math.PI) * w;
-
-        if (shape === 'cory') {
-            // High arched brow, flattened bottom
-            if (t > 0.6) rY *= (1.0 + (t - 0.6) * 0.4);
-            rZ *= 1.15;
-        } else if (shape === 'ribbon') {
-            // Knife-edge ventral tapering
-            rZ *= (0.4 + t * 0.6);
-        }
-
-        if (t > 0.65) {
-            // Taper towards snout
-            rY *= (1.0 - (t - 0.65) * 0.45);
-            rZ *= (1.0 - (t - 0.65) * 0.55);
-        } else if (t < 0.35) {
-            // Taper towards tail peduncle
-            rY *= (0.4 + t * 1.7);
-            rZ *= (0.3 + t * 2.0);
-        }
-
-        // Slightly arched dorsal line and rounded belly
-        const yOffset = (shape === 'cory') ? -h * 0.15 : (1.0 - t) * (h * 0.08);
+        const profile = getFishCrossSection(t, len, h, w, shape);
 
         for (let j = 0; j <= segs; j++) {
             const ang = (j / segs) * Math.PI * 2;
-            const py = Math.cos(ang) * rY + yOffset;
-            const pz = Math.sin(ang) * rZ;
-            positions.push(x, py, pz);
+            const py = Math.cos(ang) * profile.rY + profile.yOffset;
+            const pz = Math.sin(ang) * profile.rZ;
+            positions.push(profile.x, py, pz);
             uvs.push(t, j / segs);
         }
     }
@@ -548,6 +560,105 @@ function createSculptedFishBody(len, h, w, shape = 'fusiform') {
             indices.push(a, b, d);
             indices.push(b, c, d);
         }
+    }
+
+    geo.setIndex(indices);
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.computeVertexNormals();
+
+    geo.userData = {
+        rings: rings,
+        segs: segs,
+        restPositions: new Float32Array(positions),
+        len: len,
+        h: h,
+        w: w,
+        shape: shape
+    };
+
+    return geo;
+}
+
+// Seamless Caudal Tail Fin: root matches the exact caudal peduncle cross-section with zero gap
+function createSeamlessCaudalFinGeo(tailLen, tailH, peduncleRY) {
+    const geo = new THREE.BufferGeometry();
+    const positions = [];
+    const uvs = [];
+    const indices = [];
+    const cols = 4;
+    const rows = 3;
+
+    const baseH = peduncleRY * 1.8;
+
+    for (let i = 0; i <= cols; i++) {
+        const u = i / cols; // 0 at peduncle root, 1 at fin trailing edge
+        const fx = -u * tailLen;
+        // Natural caudal expansion: from peduncle base height to full caudal fan height
+        const currentH = baseH + (tailH - baseH) * Math.pow(u, 0.85);
+
+        for (let j = 0; j <= rows; j++) {
+            const v = j / rows; // 0 bottom, 1 top
+            // Forked / curved trailing edge indentation
+            const forkIndent = (u > 0.6) ? Math.sin(v * Math.PI) * (tailLen * 0.22) * Math.pow((u - 0.6) / 0.4, 1.2) : 0;
+            const fy = (v - 0.5) * currentH;
+            positions.push(fx + forkIndent, fy, 0);
+            uvs.push(u, v);
+        }
+    }
+
+    for (let i = 0; i < cols; i++) {
+        for (let j = 0; j < rows; j++) {
+            const a = i * (rows + 1) + j;
+            const b = (i + 1) * (rows + 1) + j;
+            const c = (i + 1) * (rows + 1) + (j + 1);
+            const d = i * (rows + 1) + (j + 1);
+            indices.push(a, b, d);
+            indices.push(b, c, d);
+            indices.push(d, b, a);
+            indices.push(d, c, b);
+        }
+    }
+
+    geo.setIndex(indices);
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.computeVertexNormals();
+    return geo;
+}
+
+// Seamless Dorsal Sail Fin: base line conforms to the curved dorsal spine ridge
+function createSeamlessDorsalFinGeo(dorsalLen, dorsalH) {
+    const geo = new THREE.BufferGeometry();
+    const positions = [];
+    const uvs = [];
+    const indices = [];
+    const segs = 5;
+
+    for (let i = 0; i <= segs; i++) {
+        const u = i / segs; // 0 front root, 1 back root
+        const fx = (u - 0.5) * dorsalLen;
+        // Upper edge follows a dynamic sail crest
+        const sailH = Math.sin(u * Math.PI * 0.85 + 0.15 * Math.PI) * dorsalH;
+
+        // Base vertex (submerged slightly in dorsal flesh to guarantee zero gap)
+        positions.push(fx, -0.2, 0);
+        uvs.push(u, 0);
+
+        // Top crest vertex
+        positions.push(fx - dorsalLen * 0.12 * u, sailH, 0);
+        uvs.push(u, 1);
+    }
+
+    for (let i = 0; i < segs; i++) {
+        const a = i * 2;
+        const b = (i + 1) * 2;
+        const c = (i + 1) * 2 + 1;
+        const d = i * 2 + 1;
+        indices.push(a, b, d);
+        indices.push(b, c, d);
+        indices.push(d, b, a);
+        indices.push(d, c, b);
     }
 
     geo.setIndex(indices);
@@ -626,7 +737,7 @@ function createProceduralFishMesh(spec, fish) {
     bodyMesh.receiveShadow = true;
     group.add(bodyMesh);
 
-    // 2. Caudal Fin (Tail) with Flowing Silhouette
+    // Fin Material with feathered translucency and specular highlights
     const finMat = new THREE.MeshStandardMaterial({
         color: finColor,
         transparent: true,
@@ -635,82 +746,101 @@ function createProceduralFishMesh(spec, fish) {
         side: THREE.DoubleSide
     });
 
+    // 2. Seamless Caudal Fin (Tail) directly rooted into the caudal peduncle
+    const peduncleProfile = getFishCrossSection(0, len, h, w, shape);
     const tailLen = isBetta ? len * 0.95 : (isRibbon ? len * 0.35 : len * 0.52);
     const tailH = isBetta ? h * 1.8 : (isDisk ? h * 1.2 : (isRibbon ? h * 0.65 : h * 0.95));
-    const tailGeo = new THREE.PlaneGeometry(tailLen, tailH, 4, 3);
-    tailGeo.translate(-tailLen * 0.5, 0, 0);
+    const tailGeo = createSeamlessCaudalFinGeo(tailLen, tailH, peduncleProfile.rY);
 
     const tailMesh = new THREE.Mesh(tailGeo, finMat);
-    tailMesh.position.set(-len * 0.5, 0, 0);
+    tailMesh.position.set(-len * 0.5, peduncleProfile.yOffset, 0);
     tailMesh.name = 'tail';
     group.add(tailMesh);
 
     // Special: Ivory white tail rings for Black Ghost Knifefish
     if (isRibbon) {
-        const ringGeo = new THREE.CylinderGeometry(w * 0.7, w * 0.6, len * 0.12, 10, 1, true);
+        const ringGeo = new THREE.CylinderGeometry(w * 0.55, w * 0.5, len * 0.12, 10, 1, true);
         ringGeo.rotateZ(Math.PI * 0.5);
         const ringMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
         const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.position.set(-len * 0.42, 0, 0);
+        ring.position.set(-len * 0.42, peduncleProfile.yOffset, 0);
         group.add(ring);
     }
 
-    // 3. Dorsal Sail Fin (Top Crest)
+    // 3. Seamless Dorsal Sail Fin (Top Crest) rooted directly into dorsal ridge
     const dorsalLen = isRibbon ? len * 0.2 : (isDisk ? len * 0.65 : len * 0.5);
     const dorsalH = isDisk ? h * 1.25 : (isBetta ? h * 0.9 : h * 0.5);
-    const dorsalGeo = new THREE.PlaneGeometry(dorsalLen, dorsalH, 3, 2);
-    dorsalGeo.translate(-dorsalLen * 0.15, dorsalH * 0.45, 0);
+    const dorsalProfile = getFishCrossSection(0.48, len, h, w, shape);
+    const dorsalGeo = createSeamlessDorsalFinGeo(dorsalLen, dorsalH);
+
     const dorsalMesh = new THREE.Mesh(dorsalGeo, finMat);
-    dorsalMesh.position.set(0, h * 0.65, 0);
+    dorsalMesh.position.set(dorsalProfile.x, dorsalProfile.yOffset + dorsalProfile.rY - 0.4, 0);
     group.add(dorsalMesh);
 
-    // 4. Paired Pectoral Fins (Flapping on flanks)
-    const pecGeo = new THREE.PlaneGeometry(len * 0.28, h * 0.32);
-    pecGeo.translate(-len * 0.12, 0, 0);
+    // 4. Paired Pectoral Fins (Anchored directly on the flank surface without floating gap)
+    const pecProfile = getFishCrossSection(0.65, len, h, w, shape);
+    const pecLen = len * 0.28;
+    const pecH = h * 0.32;
+    const pecGeo = new THREE.PlaneGeometry(pecLen, pecH, 2, 2);
+    pecGeo.translate(-pecLen * 0.45, 0, 0);
+
+    const pecZ = pecProfile.rZ * 0.94; // flush with flank skin
+    const pecY = pecProfile.yOffset - pecProfile.rY * 0.28;
 
     const leftPec = new THREE.Mesh(pecGeo, finMat);
-    leftPec.position.set(len * 0.18, -h * 0.18, w * 0.95);
-    leftPec.rotation.y = 0.5;
+    leftPec.position.set(pecProfile.x, pecY, pecZ);
+    leftPec.rotation.y = 0.42;
     leftPec.name = 'leftPec';
     group.add(leftPec);
 
     const rightPec = new THREE.Mesh(pecGeo, finMat);
-    rightPec.position.set(len * 0.18, -h * 0.18, -w * 0.95);
-    rightPec.rotation.y = -0.5;
+    rightPec.position.set(pecProfile.x, pecY, -pecZ);
+    rightPec.rotation.y = -0.42;
     rightPec.name = 'rightPec';
     group.add(rightPec);
 
     // 5. Long Ventral Thread Streamers (For Discus and Angelfish)
+    let leftStreamer = null;
+    let rightStreamer = null;
     if (isDisk) {
+        const streamerProfile = getFishCrossSection(0.6, len, h, w, shape);
         const streamerGeo = new THREE.CylinderGeometry(0.8, 0.4, h * 1.8, 6);
         streamerGeo.translate(0, -h * 0.9, 0);
         const streamerMat = new THREE.MeshStandardMaterial({ color: finColor, roughness: 0.3 });
-        const leftStreamer = new THREE.Mesh(streamerGeo, streamerMat);
-        leftStreamer.position.set(len * 0.1, -h * 0.6, w * 0.4);
-        leftStreamer.rotation.z = -0.3;
+
+        leftStreamer = new THREE.Mesh(streamerGeo, streamerMat);
+        leftStreamer.position.set(streamerProfile.x, streamerProfile.yOffset - streamerProfile.rY * 0.95, streamerProfile.rZ * 0.5);
+        leftStreamer.rotation.z = -0.25;
         group.add(leftStreamer);
 
-        const rightStreamer = new THREE.Mesh(streamerGeo, streamerMat);
-        rightStreamer.position.set(len * 0.1, -h * 0.6, -w * 0.4);
-        rightStreamer.rotation.z = -0.3;
+        rightStreamer = new THREE.Mesh(streamerGeo, streamerMat);
+        rightStreamer.position.set(streamerProfile.x, streamerProfile.yOffset - streamerProfile.rY * 0.95, -streamerProfile.rZ * 0.5);
+        rightStreamer.rotation.z = -0.25;
         group.add(rightStreamer);
     }
 
-    // 6. Snout Whisker Barbels (For Corydoras & Catfish)
+    // 6. Snout Whisker Barbels (Embedded in chin for Corydoras & Catfish)
+    let lBarbel = null;
+    let rBarbel = null;
+    let barbelZ = 0;
     if (isCory) {
+        const snoutProfile = getFishCrossSection(0.94, len, h, w, shape);
+        barbelZ = snoutProfile.rZ * 0.82;
         const barbelGeo = new THREE.CylinderGeometry(0.7, 0.3, len * 0.22, 5);
         barbelGeo.rotateZ(-Math.PI * 0.35);
         const barbelMat = new THREE.MeshStandardMaterial({ color: primaryColor, roughness: 0.4 });
-        const lBarbel = new THREE.Mesh(barbelGeo, barbelMat);
-        lBarbel.position.set(len * 0.46, -h * 0.45, w * 0.5);
+
+        lBarbel = new THREE.Mesh(barbelGeo, barbelMat);
+        lBarbel.position.set(snoutProfile.x, snoutProfile.yOffset - snoutProfile.rY * 0.55, barbelZ);
         group.add(lBarbel);
 
-        const rBarbel = new THREE.Mesh(barbelGeo, barbelMat);
-        rBarbel.position.set(len * 0.46, -h * 0.45, -w * 0.5);
+        rBarbel = new THREE.Mesh(barbelGeo, barbelMat);
+        rBarbel.position.set(snoutProfile.x, snoutProfile.yOffset - snoutProfile.rY * 0.55, -barbelZ);
         group.add(rBarbel);
     }
 
-    // 7. Expressive Jewel Eyes (Golden Sclera Ring + Glossy Obsidian Pupil)
+    // 7. Expressive Jewel Eyes (Embedded in skull socket, eliminating floating detached spheres)
+    const headProfile = getFishCrossSection(0.82, len, h, w, shape);
     const eyeR = Math.max(1.4, h * 0.14);
     const pupilGeo = new THREE.SphereGeometry(eyeR, 8, 8);
     const pupilMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.1, metalness: 0.9 });
@@ -718,13 +848,17 @@ function createProceduralFishMesh(spec, fish) {
     const scleraGeo = new THREE.SphereGeometry(eyeR * 1.25, 8, 8);
     const scleraMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.3 });
 
+    const eyeX = headProfile.x;
+    const eyeY = headProfile.yOffset + headProfile.rY * 0.32;
+    const eyeZ = headProfile.rZ * 0.86; // embedded half-in, half-out of skull flesh
+
     const leftEye = new THREE.Group();
     const lSclera = new THREE.Mesh(scleraGeo, scleraMat);
     const lPupil = new THREE.Mesh(pupilGeo, pupilMat);
     lPupil.position.z = eyeR * 0.45;
     leftEye.add(lSclera);
     leftEye.add(lPupil);
-    leftEye.position.set(len * 0.34, h * 0.16, w * 0.78);
+    leftEye.position.set(eyeX, eyeY, eyeZ);
     group.add(leftEye);
 
     const rightEye = new THREE.Group();
@@ -733,7 +867,7 @@ function createProceduralFishMesh(spec, fish) {
     rPupil.position.z = -eyeR * 0.45;
     rightEye.add(rSclera);
     rightEye.add(rPupil);
-    rightEye.position.set(len * 0.34, h * 0.16, -w * 0.78);
+    rightEye.position.set(eyeX, eyeY, -eyeZ);
     group.add(rightEye);
 
     // Store metadata for real-time animations
@@ -742,8 +876,24 @@ function createProceduralFishMesh(spec, fish) {
         spec: spec,
         bodyMesh: bodyMesh,
         tailMesh: tailMesh,
+        dorsalMesh: dorsalMesh,
         leftPec: leftPec,
         rightPec: rightPec,
+        leftEye: leftEye,
+        rightEye: rightEye,
+        leftStreamer: leftStreamer,
+        rightStreamer: rightStreamer,
+        lBarbel: lBarbel,
+        rBarbel: rBarbel,
+        lPecRestZ: pecZ,
+        rPecRestZ: -pecZ,
+        lEyeRestZ: eyeZ,
+        rEyeRestZ: -eyeZ,
+        lBarbelRestZ: barbelZ,
+        rBarbelRestZ: -barbelZ,
+        len: len,
+        h: h,
+        w: w,
         swimPhase: Math.random() * Math.PI * 2
     };
 
@@ -780,19 +930,95 @@ function syncFishMeshes3D(dt) {
         meshGroup.rotation.y = THREE.MathUtils.lerp(meshGroup.rotation.y, targetYaw, 0.2);
         meshGroup.rotation.z = THREE.MathUtils.lerp(meshGroup.rotation.z, targetPitch, 0.2);
 
-        // Fluid Tail & Pectoral Fin Undulation
-        meshGroup.userData.swimPhase += dt * (3.0 + Math.hypot(fish.vx || 0, fish.vy || 0) * 1.8);
-        const tail = meshGroup.userData.tailMesh;
-        if (tail) {
-            tail.rotation.y = Math.sin(meshGroup.userData.swimPhase) * 0.38;
+        // Fluid Sinuous Swimming Wave & Real-time Anatomical Body Flexing
+        const speed = Math.hypot(fish.vx || 0, fish.vy || 0);
+        meshGroup.userData.swimPhase += dt * (3.4 + speed * 2.2);
+        const swimPhase = meshGroup.userData.swimPhase;
+        const fishLen = meshGroup.userData.len;
+        const turnBend = (fish.turnCurve || 0) * (fishLen * 0.22);
+
+        // 1. Organic Undulating Spine Mesh Deformation
+        const bMesh = meshGroup.userData.bodyMesh;
+        if (bMesh && bMesh.geometry && bMesh.geometry.userData && bMesh.geometry.userData.restPositions) {
+            const bGeo = bMesh.geometry;
+            const posAttr = bGeo.attributes.position;
+            const rest = bGeo.userData.restPositions;
+            const rings = bGeo.userData.rings;
+            const segs = bGeo.userData.segs;
+
+            let vIdx = 0;
+            for (let r = 0; r <= rings; r++) {
+                const t = r / rings; // 0 (tail peduncle) to 1 (snout)
+                // Traveling carangiform wave (snout stable, tail undulates with increasing amplitude)
+                const spineLag = (1.0 - t) * 3.4;
+                const waveAmp = Math.pow(1.0 - t, 1.35) * (fishLen * 0.13);
+                const zOffset = Math.sin(swimPhase - spineLag) * waveAmp + (1.0 - t) * turnBend;
+
+                for (let s = 0; s <= segs; s++) {
+                    posAttr.array[vIdx] = rest[vIdx];
+                    posAttr.array[vIdx + 1] = rest[vIdx + 1];
+                    posAttr.array[vIdx + 2] = rest[vIdx + 2] + zOffset;
+                    vIdx += 3;
+                }
+            }
+            posAttr.needsUpdate = true;
+            bGeo.computeVertexNormals();
         }
 
+        // 2. Caudal Tail Fin Lock (Anchored to the undulating peduncle at t=0)
+        const tail = meshGroup.userData.tailMesh;
+        if (tail) {
+            const peduncleZ = Math.sin(swimPhase - 3.4) * (fishLen * 0.13) + turnBend;
+            const prevZ = Math.sin(swimPhase - 3.4 + 0.28) * (Math.pow(0.92, 1.35) * (fishLen * 0.13)) + 0.92 * turnBend;
+            const spineSlope = (peduncleZ - prevZ) / (fishLen * 0.08);
+
+            tail.position.set(-fishLen * 0.5, 0, peduncleZ);
+            tail.rotation.y = Math.atan(spineSlope) + Math.sin(swimPhase - 4.2) * 0.26;
+        }
+
+        // 3. Dorsal Sail Fin (Sways with mid-spine wave at t=0.45)
+        const dorsal = meshGroup.userData.dorsalMesh;
+        if (dorsal) {
+            const dorsalT = 0.45;
+            const dorsalZ = Math.sin(swimPhase - (1.0 - dorsalT) * 3.4) * (Math.pow(1.0 - dorsalT, 1.35) * (fishLen * 0.13)) + (1.0 - dorsalT) * turnBend;
+            dorsal.position.z = dorsalZ;
+            dorsal.rotation.y = Math.sin(swimPhase - 2.2) * 0.12;
+        }
+
+        // 4. Pectoral Fins (Flutter against the flank surface)
         const lPec = meshGroup.userData.leftPec;
         const rPec = meshGroup.userData.rightPec;
         if (lPec && rPec) {
-            const pecFlap = Math.sin(meshGroup.userData.swimPhase * 1.6) * 0.32;
-            lPec.rotation.z = pecFlap;
-            rPec.rotation.z = -pecFlap;
+            const pecT = 0.65;
+            const pecZ = Math.sin(swimPhase - (1.0 - pecT) * 3.4) * (Math.pow(1.0 - pecT, 1.35) * (fishLen * 0.13)) + (1.0 - pecT) * turnBend;
+            const pecFlap = Math.sin(swimPhase * 1.6) * 0.28;
+
+            lPec.position.z = meshGroup.userData.lPecRestZ + pecZ;
+            lPec.rotation.y = 0.42 + pecFlap * 0.38;
+            lPec.rotation.z = pecFlap * 0.2;
+
+            rPec.position.z = meshGroup.userData.rPecRestZ + pecZ;
+            rPec.rotation.y = -0.42 - pecFlap * 0.38;
+            rPec.rotation.z = -pecFlap * 0.2;
+        }
+
+        // 5. Embedded Eyes & Whiskers (Sway with head wave at t=0.82)
+        const lEye = meshGroup.userData.leftEye;
+        const rEye = meshGroup.userData.rightEye;
+        if (lEye && rEye) {
+            const headT = 0.82;
+            const headZ = Math.sin(swimPhase - (1.0 - headT) * 3.4) * (Math.pow(1.0 - headT, 1.35) * (fishLen * 0.13)) + (1.0 - headT) * turnBend;
+            lEye.position.z = meshGroup.userData.lEyeRestZ + headZ;
+            rEye.position.z = meshGroup.userData.rEyeRestZ + headZ;
+        }
+
+        const lBarbel = meshGroup.userData.lBarbel;
+        const rBarbel = meshGroup.userData.rBarbel;
+        if (lBarbel && rBarbel) {
+            const snoutT = 0.94;
+            const snoutZ = Math.sin(swimPhase - (1.0 - snoutT) * 3.4) * (Math.pow(1.0 - snoutT, 1.35) * (fishLen * 0.13)) + (1.0 - snoutT) * turnBend;
+            lBarbel.position.z = meshGroup.userData.lBarbelRestZ + snoutZ;
+            rBarbel.position.z = meshGroup.userData.rBarbelRestZ + snoutZ;
         }
     }
 
@@ -827,8 +1053,10 @@ function syncDecorations3D() {
     state.decorations.forEach(d => {
         const cat = (typeof DECOR_CATALOG !== 'undefined') ? DECOR_CATALOG.find(c => c.id === d.id) : null;
         const x3d = (d.xRatio - 0.5) * TANK_WIDTH;
-        const y3d = -TANK_HEIGHT * 0.5 + 16;
-        const z3d = ((d.zRatio || 0.5) - 0.5) * (TANK_DEPTH * 0.7);
+        const floorY = -TANK_HEIGHT * 0.5 + 16;
+        const y3d = d.yRatio !== undefined ? (-(d.yRatio - 0.5) * TANK_HEIGHT) : floorY;
+        const zNorm = d.zDepth !== undefined ? d.zDepth : ((d.zRatio || 0.5) - 0.5);
+        const z3d = zNorm * (TANK_DEPTH * 0.7);
 
         const dMesh = createSingleDecor3D(d.id, cat);
         if (dMesh) {
@@ -1036,6 +1264,13 @@ function onCanvas3DClick(event) {
     if (is360CamActive) return;
     if (!threeCamera || !fishGroup) return;
 
+    if (currentMode === 'feed' || currentMode === 'clean' || currentMode === 'garden' || currentMode === 'laser' || currentMode === 'decorate') {
+        if (typeof handleCanvasPointerDown === 'function') {
+            handleCanvasPointerDown(event.clientX, event.clientY);
+        }
+        return;
+    }
+
     const rect = event.target.getBoundingClientRect();
     mouseVec.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouseVec.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -1054,8 +1289,10 @@ function onCanvas3DClick(event) {
             }
         }
     } else {
-        // Tapped Glass
-        if (typeof triggerGlassTap === 'function') {
+        // Tapped Glass or fallback interaction
+        if (typeof handleCanvasPointerDown === 'function') {
+            handleCanvasPointerDown(event.clientX, event.clientY);
+        } else if (typeof triggerGlassTap === 'function') {
             triggerGlassTap(event.clientX, event.clientY);
         }
     }
@@ -1105,5 +1342,6 @@ window.resetCameraView = resetCameraView;
 window.setRenderMode = setRenderMode;
 window.renderAquarium3D = renderAquarium3D;
 window.initThreeScene = initThreeScene;
+window.syncDecorations3D = syncDecorations3D;
 window.updateThreeLighting = updateThreeEnvironment;
 window.updateThreeEnvironment = updateThreeEnvironment;

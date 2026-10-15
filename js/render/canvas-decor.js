@@ -9,25 +9,39 @@ function getCachedDecorGrad(key, createFn) {
     return grad;
 }
 
-function drawDecorations(now) {
+function drawDecorations(now, layer = 'all') {
     if (!Array.isArray(state.decorations)) return;
 
     state.decorations.forEach(d => {
         const x = d.xRatio * cw;
-        const baseY = getSubstrateHeightAt(x) + 6;
+        const floorY = getSubstrateHeightAt(x) + 6;
+        const baseY = d.yRatio !== undefined ? (d.yRatio * ch) : floorY;
+
+        // Depth calculation: items placed higher up or with negative zDepth are in background
+        const isNearFloor = (floorY - baseY) < 35;
+        const z = d.zDepth !== undefined ? d.zDepth : (isNearFloor ? 0.15 : -0.55);
+
+        // Multi-layer split if layer is 'back' or 'front'
+        if (layer === 'back' && z >= -0.1) return;
+        if (layer === 'front' && z < -0.1) return;
+
         const cat = DECOR_CATALOG.find(c => c.id === d.id);
         const isPlant = cat && cat.isPlant;
         const growthRatio = isPlant ? Math.max(0.35, (d.growth || 100) / 100) : 1.0;
         const isFlowering = isPlant && ((d.growth || 0) >= 95 || d.stage === 'flowering');
 
+        // Scale & Parallax based on depth z
+        const depthScale = Math.max(0.60, Math.min(1.22, 1.0 + z * 0.38));
+        const parallaxX = mousePos.active ? (mousePos.x - cw * 0.5) * (z * 0.035) : 0;
+
         // Hydrodynamic deflection: plants yield and bend softly when fish swim past!
         let fishDeflect = 0;
         if (isPlant && state.fish) {
-            const checkY = baseY - 65;
+            const checkY = baseY - 65 * depthScale;
             for (let i = 0; i < state.fish.length; i++) {
                 const f = state.fish[i];
                 if (f.stage === 'egg') continue;
-                const dx = f.x - x;
+                const dx = f.x - (x + parallaxX);
                 if (dx > 45 || dx < -45) continue;
                 const dy = f.y - checkY;
                 if (dy > 85 || dy < -85) continue;
@@ -35,18 +49,34 @@ function drawDecorations(now) {
             }
         }
 
-        const sway = Math.sin(now * 0.002 + d.xRatio * 10) * 6 + fishDeflect;
+        const sway = Math.sin(now * 0.002 + d.xRatio * 10) * (6 * depthScale) + fishDeflect;
 
         ctx.save();
-        ctx.translate(x, baseY);
+        ctx.translate(x + parallaxX, baseY);
+        ctx.scale(depthScale, depthScale);
 
-        // Decorate / Drag Mode selection box
+        // Atmospheric perspective haze for background decor (creates rich underwater depth)
+        if (z < -0.1) {
+            ctx.globalAlpha = Math.max(0.68, 1.0 + z * 0.36);
+        }
+
+        // Decorate / Drag Mode selection box & Depth Layer Indicators
         if (currentMode === 'decorate') {
-            ctx.strokeStyle = 'rgba(16, 185, 129, 0.55)';
-            ctx.lineWidth = 1.5;
+            const isDragging = (typeof draggingDecor !== 'undefined') && draggingDecor === d;
+            ctx.strokeStyle = isDragging ? '#38bdf8' : (z < -0.2 ? 'rgba(56, 189, 248, 0.75)' : 'rgba(16, 185, 129, 0.6)');
+            ctx.lineWidth = isDragging ? 2.2 : 1.5;
             ctx.setLineDash([4, 4]);
             ctx.strokeRect(-45, -120, 90, 120);
             ctx.setLineDash([]);
+
+            // Depth layer badge indicator
+            ctx.save();
+            ctx.font = '600 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = isDragging ? '#38bdf8' : (z < -0.2 ? '#7dd3fc' : '#a7f3d0');
+            const depthLabel = z < -0.2 ? '🏞️ Hậu cảnh' : (z < 0.1 ? '🌿 Trung cảnh' : '🪨 Tiền cảnh');
+            ctx.fillText(depthLabel, 0, -126);
+            ctx.restore();
         }
 
         // Garden Care Mode Interactive Rings & Indicators

@@ -272,7 +272,7 @@ function updateSimulationLogic(dtSeconds) {
 
         // STAGE 1: EGG / ROE HATCHING
         if (fish.stage === 'egg') {
-            fish.maturity += dt * 1.15; // Hatches in ~13 seconds at 1x, or ~2.5s at 5x
+            fish.maturity += dt * 0.12; // Hatches in ~125 seconds (~2 minutes) at 1x
             fish.y = getSubstrateHeightAt(fish.x) - 7;
             if (fish.maturity >= 15) {
                 fish.stage = 'fry';
@@ -300,13 +300,14 @@ function updateSimulationLogic(dtSeconds) {
         }
 
         // Hunger decay (Fry get hungry slightly faster)
-        const hungerRate = fish.stage === 'fry' ? 0.58 : (fish.stage === 'juvenile' ? 0.42 : 0.32);
+        const hungerRate = fish.stage === 'fry' ? 0.35 : (fish.stage === 'juvenile' ? 0.26 : 0.18);
         const effectiveHungerRate = state.vacationMode ? hungerRate * 0.25 : hungerRate;
         fish.hunger = Math.max(0, fish.hunger - effectiveHungerRate * dt);
 
-        // Passive Growth when well-fed (hunger > 45)
+        // Passive Growth when well-fed (hunger > 45 & healthy water)
+        // Fry takes ~8.8 min (29 pts / 0.055) to juvenile; Juvenile takes ~20 min (55 pts / 0.045) to adult
         if (fish.hunger > 45 && fish.health > 50) {
-            const growthRate = fish.stage === 'fry' ? 0.55 : (fish.stage === 'juvenile' ? 0.38 : 0.08);
+            const growthRate = fish.stage === 'fry' ? 0.055 : (fish.stage === 'juvenile' ? 0.045 : 0.012);
             const eventGrowth = (activeTankEvent && activeTankEvent.id === 'golden_hour') ? 1.8 : 1.0;
             fish.maturity += growthRate * dt * eventGrowth;
         }

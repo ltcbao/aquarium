@@ -7,8 +7,8 @@ function renderAquarium(now) {
     // 4. Substrate gravel, bottom shadows & ambient sand details
     drawSubstrate(now);
 
-    // 5. Aquascape live plants, rocks & ornaments
-    drawDecorations(now);
+    // 5. Aquascape live plants, rocks & ornaments: BACKGROUND DEPTH LAYER (Hậu cảnh)
+    drawDecorations(now, 'back');
 
     // 6. Substrate biological waste spots
     drawWasteSpots(now);
@@ -34,6 +34,9 @@ function renderAquarium(now) {
     for (let i = 0; i < state.fish.length; i++) {
         drawSingleFishOrEgg(state.fish[i], now);
     }
+
+    // 10.5. Aquascape live plants, rocks & ornaments: FOREGROUND / MIDGROUND LAYER (Tiền cảnh)
+    drawDecorations(now, 'front');
 
     // 11. Physics wake rings & surface movement
     drawWakeRings();

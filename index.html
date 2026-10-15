@@ -222,6 +222,9 @@
                 title="Toggle Audio">
                 <i id="icon-audio" class="ph-fill ph-speaker-high text-sm"></i>
             </button>
+
+            <!-- User / Admin Profile Badge -->
+            <div id="hud-user-profile-badge" class="shrink-0"></div>
         </div>
     </header>
 
@@ -293,8 +296,7 @@
         <!-- Decorate Mode Subbar -->
         <div id="sub-decorate" class="hidden glass-panel rounded-2xl px-3.5 py-2 flex items-center gap-3 shadow-2xl">
             <span class="text-xs text-slate-200 flex items-center gap-1.5">
-                <i class="ph-fill ph-CursorClick text-emerald-400"></i> Drag any plant, rock, or ornament on the
-                substrate to reposition it
+                <i class="ph-fill ph-cursor-click text-emerald-400"></i> Kéo thả đồ vật lên cao vào vùng <b>Hậu cảnh</b> hoặc kéo xuống đáy để tạo chiều sâu chân thực!
             </span>
             <button onclick="openDrawer('decor')"
                 class="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-semibold hover:bg-emerald-500/30 transition">
@@ -519,6 +521,12 @@
                     <i class="ph-fill ph-floppy-disk text-base text-amber-300"></i>
                     <span>Vault</span>
                 </button>
+                <button onclick="typeof ProfileManager !== 'undefined' && ProfileManager.isAdmin() ? openAdminConsole() : openAuthModal()" id="btn-dock-profile"
+                    class="tool-btn h-10 px-2.5 sm:px-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/30 text-xs font-semibold flex items-center gap-1.5 text-cyan-200 whitespace-nowrap"
+                    title="Quản lý Tài khoản & Quyền Admin">
+                    <i class="ph-fill ph-user-gear text-base text-cyan-300"></i>
+                    <span>Tài khoản</span>
+                </button>
             </div>
         </div>
     </nav>
@@ -650,6 +658,7 @@
 
     <!-- Layer 2: Core State & Utilities -->
     <script src="js/core/state.js"></script>
+    <script src="js/core/profile-manager.js"></script>
     <script src="js/core/utils.js"></script>
     <script src="js/core/audio.js"></script>
     <script src="js/core/save-system.js"></script>
@@ -678,6 +687,7 @@
     <script src="js/ui/shop.js"></script>
     <script src="js/ui/lab.js"></script>
     <script src="js/ui/settings.js"></script>
+    <script src="js/ui/admin-dev.js"></script>
 
     <!-- Layer 6: Application Bootstrap & Main Loop -->
     <script src="js/app.js"></script>
